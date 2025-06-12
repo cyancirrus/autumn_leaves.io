@@ -1,7 +1,7 @@
-<link rel="stylesheet" href="style.css">
 ---
 title: "Autumn Leaves"
 ---
+<link rel="stylesheet" href="style.css">
 
 # Welcome to Autumn Leaves and First Taste of Learnings!
 
