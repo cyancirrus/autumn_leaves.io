@@ -5,10 +5,10 @@ title: "Autumn Leaves"
 
 # Welcome to Autumn Leaves and First Taste of Learnings!
 
-## A Prview into Current Studies
+## A Preview of Most Recent Works in Progress 
 
 [Check into my pre-optimized scheduler](https://github.com/cyancirrus/matix)
 
 [Current into status of my neural net](https://github.com/cyancirrus/neural-net)
 
-## Does this work
+## Current Studies
