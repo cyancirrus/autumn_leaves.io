@@ -1,4 +1,5 @@
-# Hello Welcome to a first taste of learnings!
+<link rel="stylesheet" href="style.css">
+# Welcome to Autumn Leaves and First Taste of Learnings!
 
 ## A Prview into Current Studies
 
