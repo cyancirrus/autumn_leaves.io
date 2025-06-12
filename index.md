@@ -19,4 +19,4 @@ title: "Autumn Leaves"
 - [Pre-optimized scheduler](https://github.com/cyancirrus/matix)
 - [Blas style math lib in rust](https://github.com/cyancirrus/stellar-math)
 - [Neural net work-in-progress](https://github.com/cyancirrus/neural-net)
-- [Fun worle simulation](https://github.com/cyancirrus/wordle)
+- [Fun wordle dynamic programming](https://github.com/cyancirrus/wordle)
