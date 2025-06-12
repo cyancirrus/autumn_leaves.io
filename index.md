@@ -1,14 +1,22 @@
 ---
+layout: default
 title: "Autumn Leaves"
 ---
+
 <link rel="stylesheet" href="style.css">
 
-# Welcome to Autumn Leaves and First Taste of Learnings!
+# 🍂 Autumn Leaves
 
-## A Preview of Most Recent Works in Progress 
+## Recent Posts
 
-[Check into my pre-optimized scheduler](https://github.com/cyancirrus/matix)
-
-[Current into status of my neural net](https://github.com/cyancirrus/neural-net)
+<ul>
+  {% for post in site.posts %}
+    <li><a href="{{ post.url }}">{{ post.title }}</a> ({{ post.date | date: "%Y-%m-%d" }})</li>
+  {% endfor %}
+</ul>
 
 ## Current Studies
+- [Pre-optimized scheduler](https://github.com/cyancirrus/matix)
+- [Blas style math lib in rust](https://github.com/cyancirrus/stellar-math)
+- [Neural net work-in-progress](https://github.com/cyancirrus/neural-net)
+- [Fun worle simulation](https://github.com/cyancirrus/wordle)
