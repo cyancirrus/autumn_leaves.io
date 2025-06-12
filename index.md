@@ -1,4 +1,8 @@
 <link rel="stylesheet" href="style.css">
+---
+title: "Autumn Leaves"
+---
+
 # Welcome to Autumn Leaves and First Taste of Learnings!
 
 ## A Prview into Current Studies
