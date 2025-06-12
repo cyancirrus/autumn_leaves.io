@@ -1,11 +1,28 @@
 body {
-  background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80') no-repeat center center fixed;
+  background-image: url('assets/anthony-lee-zZ-G8iOwa8-unsplash.jpg');
   background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: #aaa;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+  font-family: 'Georgia', serif;
   min-height: 100vh;
   margin: 0;
-  padding: 0;
+  padding: 2rem 3rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
 }
-<style>
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}
+
 .window {
   width: 320px;
   background: rgba(255,255,255,0.9);
@@ -36,19 +53,11 @@ body {
   cursor: pointer;
 }
 
+.close-btn:hover {
+  color: #ffcccb;
+}
+
 .window-content {
   padding: 20px;
   color: #333;
 }
-</style>
-
-<div class="window">
-  <div class="window-header">
-    Autumn Leaves App
-    <button class="close-btn" onclick="this.closest('.window').style.display='none';">&times;</button>
-  </div>
-  <div class="window-content">
-    🍁 This is a sample app window.  
-    You can put anything you want here—text, images, buttons, even music players!
-  </div>
-</div>
