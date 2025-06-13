@@ -1,4 +1,17 @@
+<!DOCTYPE html>
 <body>
-	{{ content }}
-</body>
+  <div class="content-wrapper">
+    <h1>🍂 Autumn Leaves</h1>
 
+    {% for post in site.posts %}
+      <div class="window">
+        <div class="window-header">
+          {{ post.title }} <small>({{ post.date | date: "%Y-%m-%d" }})</small>
+        </div>
+        <div class="window-content">
+          {{ post.content }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</body>

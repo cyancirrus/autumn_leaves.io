@@ -3,8 +3,6 @@ layout: default
 title: "Autumn Leaves"
 ---
 
-<link rel="stylesheet" href="style.css">
-
 # 🍂 Autumn Leaves
 
 ## Recent Posts
