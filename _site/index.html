@@ -49,7 +49,7 @@ I wanted users to safely write to their own portion of the data — i.e., a user
 <p>This was tricky to model. The user should only be able to modify their own data. It should also be fully async.</p>
 
 <p>Originally, the data appeared in synchronous code as:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HashMap&lt;UserId, HashSet&lt;UserId&gt;&gt;
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">HashMap</span><span class="o">&lt;</span><span class="n">UserId</span><span class="p">,</span> <span class="n">HashSet</span><span class="o">&lt;</span><span class="n">UserId</span><span class="o">&gt;&gt;</span>
 </code></pre></div></div>
 <p>A mapping from user ID to the set of users they follow.<br />
 I used a set to enable quick <code class="language-plaintext highlighter-rouge">unfollow</code> (O(1)) and to ensure no duplicate follows.</p>
@@ -58,7 +58,7 @@ I used a set to enable quick <code class="language-plaintext highlighter-rouge">
 
 <p>To model the problem, I initially reached for a <code class="language-plaintext highlighter-rouge">Mutex</code>.<br />
 Mutexes were useful when solving async LeetCode problems, allowing mutation within async code — so I started there.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mutex&lt;HashSet&lt;UserId&gt;&gt;
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Mutex</span><span class="o">&lt;</span><span class="n">HashSet</span><span class="o">&lt;</span><span class="n">UserId</span><span class="o">&gt;&gt;</span>
 </code></pre></div></div>
 
 <p>This worked, but it was blocking.<br />
@@ -93,15 +93,15 @@ Enter <strong>DashMap</strong> — like Gandalf cresting the hill at Helm’s De
 <p>DashMap allows users to mutate their private data without needing explicit mutability, and it’s a near drop-in replacement for <code class="language-plaintext highlighter-rouge">HashMap</code>.</p>
 
 <p>For example:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;mut self, followee_id: UserId, follower_id: UserId)
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">follow</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">,</span> <span class="n">followee_id</span><span class="p">:</span> <span class="n">UserId</span><span class="p">,</span> <span class="n">follower_id</span><span class="p">:</span> <span class="n">UserId</span><span class="p">)</span>
 </code></pre></div></div>
 <p>became:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;self, followee_id: UserId, follower_id: UserId)
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">follow</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">followee_id</span><span class="p">:</span> <span class="n">UserId</span><span class="p">,</span> <span class="n">follower_id</span><span class="p">:</span> <span class="n">UserId</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p>This helped clean up parts of Axum’s server model and the guarantees needed to build the API tree.<br />
 DashMap enabled private mutation — as long as you handled the interior structure correctly, e.g.:</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>DashMap&lt;UserId, RwLock&lt;HashSet&lt;UserId&gt;&gt;&gt;
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DashMap</span><span class="o">&lt;</span><span class="n">UserId</span><span class="p">,</span> <span class="n">RwLock</span><span class="o">&lt;</span><span class="n">HashSet</span><span class="o">&lt;</span><span class="n">UserId</span><span class="o">&gt;&gt;&gt;</span>
 </code></pre></div></div>
 
 <p>This was exactly the model I was searching for.<br />
