@@ -3,7 +3,7 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  color: #aaa;
+  color: #3d0808;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
   font-family: 'Georgia', serif;
   min-height: 100vh;
@@ -24,11 +24,12 @@ body::before {
 }
 
 .window {
-  width: 80%;
+  width: 90%;
   min-width: 600px;
   max-width: 900px;
 
-  background: rgba(255,255,255,0.9);
+  background: #c7b7a7;
+  /* background: rgba(255,255,255,0.9); */
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 
@@ -40,7 +41,8 @@ body::before {
 }
 
 .window-header {
-  background: linear-gradient(90deg, #feb47b 0%, #ff7e5f 100%);
+  /* background: linear-gradient(90deg, #feb47b 0%, #ff7e5f 100%); */
+  background: #a84405;
   color: #fff;
   padding: 12px 16px;
   font-weight: bold;
