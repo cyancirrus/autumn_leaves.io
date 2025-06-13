@@ -14,13 +14,134 @@
 
 <div class="window">
     <div class="window-header">
+      First Taste of Learnings <small>(2025-06-12)</small>
+    </div>
+    <div class="window-content">
+      <p><a href="https://github.com/cyancirrus/bluesky-async-study">Rust Fully Asynchronous BlueSky-like study</a></p>
+
+<h2 id="first-async-application-in-rust-and-first-fully-async-backend-ever">First Async Application in Rust (and first fully async backend ever!)</h2>
+
+<p>Recently I’ve been trying to get my head around how to use async within the Rust context.
+I’ve had some previous experience using async within Python helping to make non-blocking calls for embeddings of identified terms as they were independent.
+Although - I had some prior experience I was still greatly intimidated and had put off learning async within - many developers who appear much more talented had spoke of how difficult it was to understand the model.</p>
+
+<h3 id="dont-be-scared-jump-in">Don’t Be Scared <em>Jump In</em></h3>
+
+<p>Surprisingly transitioning my message board-like or blueskylike from leetcode into fully async wasn’t terribly difficult.
+First I worked through several problems in async which focused upon using a notifications and then streaming and without much practice I jumped in.</p>
+
+<p>The api structure being mostly async really was just focused around learning the tools</p>
+<ul>
+  <li>Axum’s api-tree and server</li>
+  <li>Serde to communicate with json and handle the barier between client and server</li>
+  <li>Tokio for the async run-time and for the async sync handler RwLock</li>
+  <li>std::sync::Arc for having an atomic reference counter for the different people allowing to clone without actually needing to clone the data</li>
+</ul>
+
+<p>But my favourtie package which was the stand out for me…</p>
+
+<h2 id="what-the-data-looked-like-on-the-backend">What the data looked like on the backend</h2>
+
+<p>Within the project one of the main api’s and handlin I needed to port was the <code class="language-plaintext highlighter-rouge">fn follow(...)</code> which takes in a followee_id and a follower_id.
+I wished to be able to have users write safetly to their own portion of the data ie the user (the follower) clicks follow on a person (the followee) and we remember this information.</p>
+
+<p>This was a little bit difficult to model well the user should only be able to modify their own data, it should be able to be fully async…</p>
+
+<p>The data appeared within the synchronous code as</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Hashmap&lt;UserId, HashSet&lt;UserId&gt;&gt;
+</code></pre></div></div>
+
+<p>Which is simply a mapping from a user id to a set of users that they follow.
+A set was used in order to have quick unfollows O(1), as well as knowing all users shouldn’t duplicately follow other users.</p>
+
+<h3 id="first-iteration">First Iteration</h3>
+
+<p>In order to model the problem I had decided perhaps we use a Mutex.
+Mutex was a useful pattern in solving the leetcodes and allowed me to mutate data within asynchronous code to lets start there.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mutex&lt;HashSet, Mutex&lt;UserId&gt;&gt;
+</code></pre></div></div>
+
+<p>This worked but it was blocking. This was fully synchronous code masquerading as the async.
+It was time to explore the other structures beyond what I had initially seen in my limited async Rust exposure.</p>
+
+<h3 id="enter-rwlock-read-write-lock">Enter RwLock (Read-Write-Lock)</h3>
+
+<p>My api naturally could logically be modeled and partitioned into both read and write actions.</p>
+
+<ul>
+  <li>ReadAction: NewsFeed</li>
+  <li>WriteAction : Follow, Publish, Unfollow</li>
+</ul>
+
+<p>This seemed like a natural way to model the problem so lets implement it.</p>
+
+<p>The data then became modeled as</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RwLock&lt;Hashmap&lt;UserId, RwLock&lt;HashSet&lt;UserId&gt;&gt;&gt;
+</code></pre></div></div>
+<p>along with a couple of code changes : <code class="language-plaintext highlighter-rouge">.lock().await</code> -&gt; <code class="language-plaintext highlighter-rouge">.read().await</code> or <code class="language-plaintext highlighter-rouge">.write().await</code>, but overall the changes were very minimal</p>
+
+<p>RwLock was a major gain beyond a Mutex (Mutex is like a lock so only a single user or thread can have access to data).
+RwLock enabled multiple users to read from the data asynchronously  and in parallel</p>
+
+<p>…but the problem remained, and most of my actions actually cause side-effects and need to be writes
+but unfortunately the outer most Read-Write-Lock caused the entire “backend” to be blocked on a single write and even users reading would be locked during a single write.</p>
+
+<p>Multiple user’s writing to the same location… even though they should be seperate b/c a user should only write to their specific point…
+<em>This problem should be abled to be modeled. How can i drive this seperation?</em></p>
+
+<h3 id="dashmap-the-sleeper-king">Dashmap the Sleeper King</h3>
+
+<p>The problem seemed so simple… just read-write lock on the interior data.
+Enter Dashmap, dashmap does exactly this, it was like Gandalf the Grey coming over the hill in Lord of the Rings!</p>
+
+<p>Dashmap allows users to write to write to their private data without causing a need for explicit mutability and.. and is a near drop-in replacement for HashMap</p>
+
+<blockquote>
+  <p>ie</p>
+  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;mut self, followee_id:UserId, follower_id:UserId) 
+</code></pre></div>  </div>
+  <p>became</p>
+  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;self, followee_id:UserId, follower_id:UserId)
+</code></pre></div>  </div>
+</blockquote>
+
+<p>This helped to clear some of the trickier parts of Axum’s Server model and guarantees needed in order to build the api-tree interface.
+Dashmap enables this private mutation as long as you handle the interior part ie as long as the <code class="language-plaintext highlighter-rouge">DashMap&lt;UserId: **RwLock&lt;HashSet&lt;UserId&gt;&gt;**</code>.</p>
+
+<p>This was the exact model I was searching for - I cannot recommend the library enough if you are facing a similar modeling problem where something feels like it <em>should be possible</em>.</p>
+
+<h2 id="takeaway">Takeaway</h2>
+
+<p>Not only is Rust async and the tooling around ever becoming ever more mature and viable tools in the workspace but…</p>
+
+<p>Don’t be scared to jump in to the technology - you’ve already solved many problems which felt difficult at the time and you succeeded them, this is just one more problem.
+When I saw the project handle a 1000 posts with a thousand users in 0.08 seconds on my local machine from 2018, I was incredibly happy.</p>
+
+<p>Programming isn’t just writing code on things you are familiar with, programming <em>is</em> solving new problems, exploring the unknown and better solutions.</p>
+
+<p>I wish you all the best and thanks for reading!
+See you in the next post!</p>
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       First Taste of Learnings <small>(2025-06-11)</small>
     </div>
     <div class="window-content">
-      <p>Welcome to my exploration of async Rust! In this post I share how I built an async message board with DashMap, rotating buffers, and efficient merge-k feeds.</p>
+      <p><em>Welcome to my blog! Inaugural post!</em></p>
 
-<p>🚀 <a href="https://github.com/cyancirrus/bluesky-async-study">See the repo</a></p>
+<p>I’m a mixture of Data Scientist, Software Engineer, and Machine Learning Engineer.
+I’m passionate about mathematics, statistics, performant computing, and low-level code.</p>
 
+<p>I’ve been exploring multiple projects focused on numerical computing and different strategies — recently concentrating on matrix multiplication techniques, neural networks, and implementing various algorithms at a low level.</p>
+
+<p>Additionally, I’ve been brushing up on data structures and algorithms to design more performant systems. I have experience with databases, API development, predictive engines, model pipelines, and backend systems for applications.</p>
+
+<p>Here, I hope to track my progress and provide a reference for others making the same journey.
+Thanks so much for reading!</p>
 
     </div>
   </div>
