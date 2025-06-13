@@ -24,7 +24,6 @@ body::before {
 }
 
 .content-wrapper {
-	/* background-color: rgba(220, 220, 220, 0.8);  /1* semi-transparent *1/ */
 	border-radius: 12px;
 	padding: 2rem 3rem;
 	box-shadow: 0 8px 32px rgba(0,0,0,0.2);
@@ -37,17 +36,10 @@ body::before {
 
 .window {
 	width: 90%;
-	/* min-width: 600px; */
 	max-width: 900px;
-	/* nice grey color */
-	/* background:#dcdcdc; */
-	/* background: rgba(160,160,160,0.1); */
-	/* border-radius: 12px; */
-	/* box-shadow: 0 8px 32px rgba(0,0,0,0.2); */	
 	margin: 40px auto;
 	overflow: hidden;
 	font-family: sans-serif;
-	/* border: 1px solid #ccc; */
 	position: relative;
 }
 
@@ -66,6 +58,7 @@ body::before {
 	color: #333;
 }
 
+/* mobile formatting */
 @media (max-width: 600px) {
 	body {
 		padding: 1rem;
@@ -94,29 +87,16 @@ body::before {
 
 code {
   font-family: monospace;
-  /* background: rgba(255, 248, 220, 0.6); /1* warm light tan *1/ */
-  background: rgba(100, 32, 32, 0.2); /* warm light tan */
+  background: rgba(100, 32, 32, 0.2); /* warm marroon when mixed with background chestnut brown */
   color: #541710;
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
 
-/* pre { */
-/*   background: rgba(255, 228, 196, 0.8); /1* bisque / warm cream *1/ */
-/*   color: #5a2e19; /1* warm darker brown for text *1/ */
-/*   padding: 1em; */
-/*   border-radius: 6px; */
-/*   overflow-x: auto; */
-/*   font-size: 0.95rem; */
-/* } */
-
-/* h1 { */
-/*   font-size: 2.5rem; /1* or whatever size looks nice *1/ */
-/* } */
   
 pre, code {
 	line-height: 1.2;
-    font-size: 0.8rem;  /* or adjust to your taste */
+    font-size: 0.8rem;
 }
 
 @media (max-width: 600px) {
@@ -133,20 +113,61 @@ pre, code {
 	  font-size: 0.8rem;
   }
   pre, code {
-    font-size: 0.7rem;  /* or adjust to your taste */
+    font-size: 0.7rem;
 	line-height: 1.2;
-    /* word-wrap: break-word; /1* for inline code *1/ */
   }
 
   pre {
-    white-space: pre-wrap; /* allow multi-line wrap in block code */
+    white-space: pre-wrap;
   }
   ul, ol {
-    font-size: 0.9rem;  /* shrink on mobile */
+    font-size: 0.9rem;
   }
 }
 
-@media (max-width: 600px) {
+
+/* --------------- */
+/* Change link color to a warm mustard */
+a {
+  color: #f5e6b8;
+  /* color: #d4a017; /1* mustard yellow *1/ */
+  text-decoration: underline;
+  /* transition: color 0.3s ease; */
 }
 
+a:hover, a:focus {
+  color: #c4b893; /* a bit darker on hover/focus */
+  outline: none;
+}
+
+/* Post titles - soften white to a warm off-white */
+h1, h2, h3 {
+	color: #401414;
+  /* color: #f5e6b8; /1* soft creamy yellow *1/ */
+  /* color: #c4b893; */
+  /* color: #a39771 */
+  /* Optional: add subtle text shadow for better contrast */
+  /* text-shadow: 1px 1px 2px rgba(0,0,0,0.4); */
+}
+
+/* If you want the window-header (post title container) to match */
+.window-header {
+    font-size: 1.2rem;
+	color:#401414;
+	/* color:#7a5d21; */
+  /* color: #f5e6b8; /1* same warm off-white *1/ */
+  /* text-shadow: 1px 1px 2px rgba(0,0,0,0.4); */
+}
+
+/* Optional: smooth link underline on hover */
+a {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+/* Bonus: gently warm background for links on hover */
+a:hover, a:focus {
+  background-color: rgba(212, 160, 23, 0.15); /* subtle mustard glow */
+  border-radius: 3px;
+}
 
