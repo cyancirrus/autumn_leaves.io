@@ -9,18 +9,16 @@ title: "Autumn Leaves"
 
 ## Recent Posts
 
-<ul>
-    {% for post in site.posts %}
-      <div class="window">
-        <div class="window-header">
-          {{ post.title }} <small>({{ post.date | date: "%Y-%m-%d" }})</small>
-        </div>
-        <div class="window-content">
-          {{ post.content }}
-        </div>
-      </div>
-    {% endfor %}
-</ul>
+{% for post in site.posts %}
+  <div class="window">
+    <div class="window-header">
+      {{ post.title }} <small>({{ post.date | date: "%Y-%m-%d" }})</small>
+    </div>
+    <div class="window-content">
+      {{ post.content }}
+    </div>
+  </div>
+{% endfor %}
 
 ## Current Studies
 - [Pre-optimized scheduler](https://github.com/cyancirrus/matix)
