@@ -5,9 +5,7 @@ title: "Autumn Leaves"
 
 # 🍂 Autumn Leaves
 
-### Leafnotes from a developer on a journey through code, math, and music
-
-## Recent Posts
+## Leafnotes from a developer on a journey through code, math, and music
 
 {% for post in site.posts %}
   <div class="window">
