@@ -1,5 +1,5 @@
 body {
-	/* border: 5px solid hotpink !important; */
+	border: 5px solid hotpink !important;
 	background-image: url('assets/anthony-lee-zZ-G8iQOwa8-unsplash.jpg');
 	background-size: cover;
 	background-position: center;
@@ -44,7 +44,7 @@ body::before {
 	max-width: 900px;
 	/* nice grey color */
 	/* background:#dcdcdc; */
-	/* background: rgba(255,255,255,0.9); */
+	background: rgba(160,160,160,0.7);
 	border-radius: 12px;
 	box-shadow: 0 8px 32px rgba(0,0,0,0.2);	
 	margin: 40px auto;
