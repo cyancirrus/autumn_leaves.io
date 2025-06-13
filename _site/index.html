@@ -21,107 +21,105 @@
 
 <h2 id="first-async-application-in-rust-and-first-fully-async-backend-ever">First Async Application in Rust (and first fully async backend ever!)</h2>
 
-<p>Recently I’ve been trying to get my head around how to use async within the Rust context.
-I’ve had some previous experience using async within Python helping to make non-blocking calls for embeddings of identified terms as they were independent.
-Although - I had some prior experience I was still greatly intimidated and had put off learning async within - many developers who appear much more talented had spoke of how difficult it was to understand the model.</p>
+<p>Recently, I’ve been trying to wrap my head around using async within Rust.<br />
+I had some prior experience using async in Python, mainly to make non-blocking calls for embeddings of identified terms when they were independent.<br />
+Although I had some background, I was still greatly intimidated — many developers, who appeared far more talented, spoke about how difficult it was to understand Rust’s async model.</p>
 
-<h3 id="dont-be-scared-jump-in">Don’t Be Scared <em>Jump In</em></h3>
+<h3 id="dont-be-scared--jump-in">Don’t Be Scared — <em>Jump In</em></h3>
 
-<p>Surprisingly transitioning my message board-like or blueskylike from leetcode into fully async wasn’t terribly difficult.
-First I worked through several problems in async which focused upon using a notifications and then streaming and without much practice I jumped in.</p>
+<p>Surprisingly, transitioning my message-board-like or BlueSky-like app from a LeetCode solution into a fully async backend wasn’t terribly difficult.<br />
+First, I worked through several async problems focused on using notifications and streaming. Then, without much further practice, I jumped in.</p>
 
-<p>The api structure being mostly async really was just focused around learning the tools</p>
+<p>The API structure — being mostly async — was really about learning the tools:</p>
 <ul>
-  <li>Axum’s api-tree and server</li>
-  <li>Serde to communicate with json and handle the barier between client and server</li>
-  <li>Tokio for the async run-time and for the async sync handler RwLock</li>
-  <li>std::sync::Arc for having an atomic reference counter for the different people allowing to clone without actually needing to clone the data</li>
+  <li><strong>Axum</strong> for the API tree and server</li>
+  <li><strong>Serde</strong> to handle JSON and the barrier between client and server</li>
+  <li><strong>Tokio</strong> for the async runtime and its async-aware RwLock</li>
+  <li><strong>std::sync::Arc</strong> for atomic reference counting so I could clone handles without cloning the actual data</li>
 </ul>
 
-<p>But my favourtie package which was the stand out for me…</p>
+<p>But my <em>favorite</em> package — the standout for me…
+– <strong>DashMap</strong> an amazing tool allowing you to manage interior mutability</p>
 
-<h2 id="what-the-data-looked-like-on-the-backend">What the data looked like on the backend</h2>
+<h2 id="what-the-data-looked-like-on-the-backend">What the Data Looked Like on the Backend</h2>
 
-<p>Within the project one of the main api’s and handlin I needed to port was the <code class="language-plaintext highlighter-rouge">fn follow(...)</code> which takes in a followee_id and a follower_id.
-I wished to be able to have users write safetly to their own portion of the data ie the user (the follower) clicks follow on a person (the followee) and we remember this information.</p>
+<p>One of the main APIs I needed to port was <code class="language-plaintext highlighter-rouge">fn follow(...)</code>, which takes in a <code class="language-plaintext highlighter-rouge">followee_id</code> and a <code class="language-plaintext highlighter-rouge">follower_id</code>.<br />
+I wanted users to safely write to their own portion of the data — i.e., a user (the follower) clicks <em>follow</em> on another user (the followee), and we remember this information.</p>
 
-<p>This was a little bit difficult to model well the user should only be able to modify their own data, it should be able to be fully async…</p>
+<p>This was tricky to model. The user should only be able to modify their own data. It should also be fully async.</p>
 
-<p>The data appeared within the synchronous code as</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Hashmap&lt;UserId, HashSet&lt;UserId&gt;&gt;
+<p>Originally, the data appeared in synchronous code as:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HashMap&lt;UserId, HashSet&lt;UserId&gt;&gt;
 </code></pre></div></div>
-
-<p>Which is simply a mapping from a user id to a set of users that they follow.
-A set was used in order to have quick unfollows O(1), as well as knowing all users shouldn’t duplicately follow other users.</p>
+<p>A mapping from user ID to the set of users they follow.<br />
+I used a set to enable quick <code class="language-plaintext highlighter-rouge">unfollow</code> (O(1)) and to ensure no duplicate follows.</p>
 
 <h3 id="first-iteration">First Iteration</h3>
 
-<p>In order to model the problem I had decided perhaps we use a Mutex.
-Mutex was a useful pattern in solving the leetcodes and allowed me to mutate data within asynchronous code to lets start there.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mutex&lt;HashSet, Mutex&lt;UserId&gt;&gt;
+<p>To model the problem, I initially reached for a <code class="language-plaintext highlighter-rouge">Mutex</code>.<br />
+Mutexes were useful when solving async LeetCode problems, allowing mutation within async code — so I started there.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mutex&lt;HashSet&lt;UserId&gt;&gt;
 </code></pre></div></div>
 
-<p>This worked but it was blocking. This was fully synchronous code masquerading as the async.
-It was time to explore the other structures beyond what I had initially seen in my limited async Rust exposure.</p>
+<p>This worked, but it was blocking.<br />
+It was synchronous code masquerading as async.<br />
+Time to explore other structures beyond what I’d seen in my limited Rust async exposure.</p>
 
-<h3 id="enter-rwlock-read-write-lock">Enter RwLock (Read-Write-Lock)</h3>
+<h3 id="enter-rwlock-read-write-lock">Enter RwLock (Read-Write Lock)</h3>
 
-<p>My api naturally could logically be modeled and partitioned into both read and write actions.</p>
-
+<p>My API could naturally be partitioned into:</p>
 <ul>
-  <li>ReadAction: NewsFeed</li>
-  <li>WriteAction : Follow, Publish, Unfollow</li>
+  <li><strong>Read actions</strong>: <code class="language-plaintext highlighter-rouge">NewsFeed</code></li>
+  <li><strong>Write actions</strong>: <code class="language-plaintext highlighter-rouge">Follow</code>, <code class="language-plaintext highlighter-rouge">Publish</code>, <code class="language-plaintext highlighter-rouge">Unfollow</code></li>
 </ul>
 
-<p>This seemed like a natural way to model the problem so lets implement it.</p>
-
-<p>The data then became modeled as</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RwLock&lt;Hashmap&lt;UserId, RwLock&lt;HashSet&lt;UserId&gt;&gt;&gt;
+<p>This seemed like a natural fit for <code class="language-plaintext highlighter-rouge">RwLock</code>, so I implemented:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>RwLock&lt;HashMap&lt;UserId, RwLock&lt;HashSet&lt;UserId&gt;&gt;&gt;&gt;
 </code></pre></div></div>
-<p>along with a couple of code changes : <code class="language-plaintext highlighter-rouge">.lock().await</code> -&gt; <code class="language-plaintext highlighter-rouge">.read().await</code> or <code class="language-plaintext highlighter-rouge">.write().await</code>, but overall the changes were very minimal</p>
 
-<p>RwLock was a major gain beyond a Mutex (Mutex is like a lock so only a single user or thread can have access to data).
-RwLock enabled multiple users to read from the data asynchronously  and in parallel</p>
+<p>There were only a few code changes: <code class="language-plaintext highlighter-rouge">.lock().await</code> became <code class="language-plaintext highlighter-rouge">.read().await</code> or <code class="language-plaintext highlighter-rouge">.write().await</code>. Overall, the changes were minimal.</p>
 
-<p>…but the problem remained, and most of my actions actually cause side-effects and need to be writes
-but unfortunately the outer most Read-Write-Lock caused the entire “backend” to be blocked on a single write and even users reading would be locked during a single write.</p>
+<p><code class="language-plaintext highlighter-rouge">RwLock</code> was a major improvement over <code class="language-plaintext highlighter-rouge">Mutex</code> — while <code class="language-plaintext highlighter-rouge">Mutex</code> allows only a single user or thread to access the data at a time, <code class="language-plaintext highlighter-rouge">RwLock</code> allowed multiple readers in parallel.</p>
 
-<p>Multiple user’s writing to the same location… even though they should be seperate b/c a user should only write to their specific point…
-<em>This problem should be abled to be modeled. How can i drive this seperation?</em></p>
+<p>…but the problem remained: most actions cause side effects (writes), and a single write on the outermost <code class="language-plaintext highlighter-rouge">RwLock</code> blocked the entire backend — even reads!<br />
+Multiple users writing to different locations — they <em>should</em> be able to write independently.<br />
+This separation had to be modelable. How could I drive that separation?</p>
 
-<h3 id="dashmap-the-sleeper-king">Dashmap the Sleeper King</h3>
+<h3 id="dashmap-the-sleeper-wizzard">DashMap: The Sleeper Wizzard</h3>
 
-<p>The problem seemed so simple… just read-write lock on the interior data.
-Enter Dashmap, dashmap does exactly this, it was like Gandalf the Grey coming over the hill in Lord of the Rings!</p>
+<p>The problem seemed so simple: just enable read-write locking on the interior data.<br />
+Enter <strong>DashMap</strong> — like Gandalf cresting the hill at Helm’s Deep!</p>
 
-<p>Dashmap allows users to write to write to their private data without causing a need for explicit mutability and.. and is a near drop-in replacement for HashMap</p>
+<p>DashMap allows users to mutate their private data without needing explicit mutability, and it’s a near drop-in replacement for <code class="language-plaintext highlighter-rouge">HashMap</code>.</p>
 
-<blockquote>
-  <p>ie</p>
-  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;mut self, followee_id:UserId, follower_id:UserId) 
-</code></pre></div>  </div>
-  <p>became</p>
-  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;self, followee_id:UserId, follower_id:UserId)
-</code></pre></div>  </div>
-</blockquote>
+<p>For example:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;mut self, followee_id: UserId, follower_id: UserId)
+</code></pre></div></div>
+<p>became:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fn follow(&amp;self, followee_id: UserId, follower_id: UserId)
+</code></pre></div></div>
 
-<p>This helped to clear some of the trickier parts of Axum’s Server model and guarantees needed in order to build the api-tree interface.
-Dashmap enables this private mutation as long as you handle the interior part ie as long as the <code class="language-plaintext highlighter-rouge">DashMap&lt;UserId: **RwLock&lt;HashSet&lt;UserId&gt;&gt;**</code>.</p>
+<p>This helped clean up parts of Axum’s server model and the guarantees needed to build the API tree.<br />
+DashMap enabled private mutation — as long as you handled the interior structure correctly, e.g.:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>DashMap&lt;UserId, RwLock&lt;HashSet&lt;UserId&gt;&gt;&gt;
+</code></pre></div></div>
 
-<p>This was the exact model I was searching for - I cannot recommend the library enough if you are facing a similar modeling problem where something feels like it <em>should be possible</em>.</p>
+<p>This was exactly the model I was searching for.<br />
+I <em>cannot</em> recommend the library enough if you’re facing a similar modeling problem where something feels like it <em>should</em> be possible.</p>
 
 <h2 id="takeaway">Takeaway</h2>
 
-<p>Not only is Rust async and the tooling around ever becoming ever more mature and viable tools in the workspace but…</p>
+<p>Not only is Rust async — and its tooling — becoming ever more mature and viable in production, but…</p>
 
-<p>Don’t be scared to jump in to the technology - you’ve already solved many problems which felt difficult at the time and you succeeded them, this is just one more problem.
-When I saw the project handle a 1000 posts with a thousand users in 0.08 seconds on my local machine from 2018, I was incredibly happy.</p>
+<p><strong>Don’t be scared to jump in.</strong><br />
+You’ve already solved problems that felt impossible at the time. This is just another challenge.</p>
 
-<p>Programming isn’t just writing code on things you are familiar with, programming <em>is</em> solving new problems, exploring the unknown and better solutions.</p>
+<p>When I saw my project handle 1,000 posts from 1,000 users in 0.08 seconds on my 2018 machine, I was thrilled.</p>
 
-<p>I wish you all the best and thanks for reading!
-See you in the next post!</p>
+<p>Programming isn’t just writing code for things you already know.<br />
+Programming <em>is</em> solving new problems, exploring the unknown, and discovering better solutions.</p>
+
+<p>Thanks so much for reading — see you in the next post!</p>
 
     </div>
   </div>
@@ -131,9 +129,9 @@ See you in the next post!</p>
       First Taste of Learnings <small>(2025-06-11)</small>
     </div>
     <div class="window-content">
-      <p><em>Welcome to my blog! Inaugural post!</em></p>
+      <h2 id="welcome-to-my-blog-inaugural-post"><em>Welcome to my blog! Inaugural post!</em></h2>
 
-<p>I’m a mixture of Data Scientist, Software Engineer, and Machine Learning Engineer.
+<p>My name is Autumn, I’m a mixture of Data Scientist, Software Engineer, and Machine Learning Engineer.
 I’m passionate about mathematics, statistics, performant computing, and low-level code.</p>
 
 <p>I’ve been exploring multiple projects focused on numerical computing and different strategies — recently concentrating on matrix multiplication techniques, neural networks, and implementing various algorithms at a low level.</p>
@@ -141,7 +139,7 @@ I’m passionate about mathematics, statistics, performant computing, and low-le
 <p>Additionally, I’ve been brushing up on data structures and algorithms to design more performant systems. I have experience with databases, API development, predictive engines, model pipelines, and backend systems for applications.</p>
 
 <p>Here, I hope to track my progress and provide a reference for others making the same journey.
-Thanks so much for reading!</p>
+Thanks so much for taking a look at my blog!</p>
 
     </div>
   </div>
