@@ -10,9 +10,16 @@ title: "Autumn Leaves"
 ## Recent Posts
 
 <ul>
-  {% for post in site.posts %}
-    <li><a href="{{ post.url }}">{{ post.title }}</a> ({{ post.date | date: "%Y-%m-%d" }})</li>
-  {% endfor %}
+    {% for post in site.posts %}
+      <div class="window">
+        <div class="window-header">
+          {{ post.title }} <small>({{ post.date | date: "%Y-%m-%d" }})</small>
+        </div>
+        <div class="window-content">
+          {{ post.content }}
+        </div>
+      </div>
+    {% endfor %}
 </ul>
 
 ## Current Studies
