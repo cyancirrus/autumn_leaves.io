@@ -1,8 +1,11 @@
 body {
-	background-image: url('assets/anthony-lee-zZ-G8iQOwa8-unsplash.jpg');
+	/* background-image: url('assets/anthony-lee-zZ-G8iQOwa8-unsplash.jpg'); */
+	background-image: url('assets/niki-clark-nSRdKJyZxW8-unsplash.jpg');
+	/* background-image: url('assets/wolfgang-hasselmann-woc0LZaz7S4-unsplash.jpg'); */
 	background-size: cover;
 	background-position: center;
 	background-repeat: no-repeat;
+	/* background-attachment: fixed; */
 	color: #3d0808;
 	font-family: 'Georgia', serif;
 	
@@ -19,15 +22,14 @@ body::before {
 	content: "";
 	position: fixed;
 	top: 0; left: 0; right: 0; bottom: 0;
-	background: rgba(0, 0, 0, 0.4);
+	background: rgba(0, 0, 0, 0.55);
 	z-index: -1;
 }
 
 .content-wrapper {
 	border-radius: 12px;
 	padding: 2rem 3rem;
-	box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-	background: rgba(160,160,160,0.55);
+	background: rgba(160,160,160,0.75);  /* a bit more opaque for readability on small screens */
 	
 	max-width: 900px;
 	width: 100%;           /* allow it to shrink on small screens */
