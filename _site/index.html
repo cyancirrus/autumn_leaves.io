@@ -14,6 +14,199 @@
 
 <div class="window">
     <div class="window-header">
+      K-Nearest Neighbors from Scratch <small>(2025-06-12)</small>
+    </div>
+    <div class="window-content">
+      <p><a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/knn.rs">KNN Machine Learning Study</a></p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>Machine learning and AI are everywhere, so let’s dive into one of the foundational topics—<em>not deep learning this time!</em> :)</p>
+
+<p>I wanted to explore one of the most elegant and straightforward algorithms: K-Nearest Neighbors (KNN).</p>
+
+<p>KNN is versatile: it can be used for both regression and classification. It even has connections to electronic engineering through Voronoi diagrams and is ubiquitous in machine learning.</p>
+
+<h2 id="what-is-knn">What is KNN</h2>
+
+<p>KNN has one central premise: <strong>data points close to each other in input space will produce similar outputs.</strong></p>
+
+<ul>
+  <li>For regression, we can average the outputs of the neighbors (either simple or weighted).</li>
+  <li>For classification, we can either compute probabilities (via softmax) or return the majority vote for a hard classification.</li>
+</ul>
+
+<p>This method is extremely clear in its assumptions and behavior. The only requirement is that the data is somewhat continuous and smooth. It’s a great way to start implementing ML from scratch, without worrying about layers or activation functions, and it also allows for interesting engineering optimizations.</p>
+
+<h2 id="knn-implementation-first-thoughts">KNN Implementation: First Thoughts</h2>
+
+<p>Alright, let’s implement KNN. But how do we do it?</p>
+
+<p><strong>Knowns:</strong></p>
+<ul>
+  <li>We need to find the top k closest neighbors for a point.</li>
+  <li>We need a distance function.</li>
+</ul>
+
+<p>For the distance function, the natural choice is Euclidean distance (triangle distance):</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">distance</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="o">&amp;</span><span class="p">[</span><span class="nb">f64</span><span class="p">],</span> <span class="n">y</span><span class="p">:</span> <span class="o">&amp;</span><span class="p">[</span><span class="nb">f64</span><span class="p">])</span> <span class="k">-&gt;</span> <span class="nb">f64</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">dist</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="n">x</span><span class="nf">.len</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">dist</span> <span class="o">+=</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="nf">.powi</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">dist</span><span class="nf">.sqrt</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>But let’s think about the cost:</p>
+
+<ul>
+  <li>For every point, computing distances to all other points gives us <code class="language-plaintext highlighter-rouge">n * d</code>.</li>
+  <li>Sorting distances gives <code class="language-plaintext highlighter-rouge">n log n</code>.</li>
+</ul>
+
+<p>So naive complexity is:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>O(n * d + n log n) -&gt; O(n log n)  (dominant term)
+</code></pre></div></div>
+
+<p>This is doable for small datasets but not optimal, especially for online or large-scale settings.</p>
+
+<h2 id="the-interesting-part-of-knn">The Interesting Part of KNN</h2>
+
+<p>To find nearest neighbors efficiently, we can partition the space into “neighborhoods.”</p>
+
+<ul>
+  <li>One approach: k-d trees.</li>
+  <li>Another approach: <strong>Locality Sensitive Hashing (LSH).</strong></li>
+</ul>
+
+<h3 id="what-is-lsh">What is LSH?</h3>
+
+<p>LSH is a hashing technique that maps similar inputs to similar outputs. Here’s the intuition:</p>
+
+<ol>
+  <li>Choose a subset of dimensions.</li>
+  <li>Add a small random perturbation to avoid boundary misalignment.</li>
+  <li>Divide by a bucket width to assign items to discrete buckets.</li>
+</ol>
+
+<p>Mathematically:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a: Standard Normal Vector ~ N(0, I)
+b: Standard Uniform Scalar ~ U(0,1)
+w: bucket width constant
+
+hash := floor((a·x - b) / w)
+</code></pre></div></div>
+
+<p>To improve robustness, we use multiple hash functions:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>H := (hash[0], hash[1], ..., hash[h])
+</code></pre></div></div>
+
+<h2 id="performance-analysis">Performance Analysis</h2>
+
+<h3 id="inference">Inference</h3>
+
+<p><strong>Inference steps:</strong></p>
+
+<ol>
+  <li>Compute the hash for each function in <code class="language-plaintext highlighter-rouge">H</code> for input <code class="language-plaintext highlighter-rouge">x</code>.</li>
+  <li>Retrieve all points from the corresponding buckets.</li>
+  <li>Remove duplicates, sort by Euclidean distance, and select top k.</li>
+</ol>
+
+<p><strong>Complexity:</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let d = dimensions
+let z = number of retrieved neighbors
+let h = number of hash functions
+
+O(d*h + h + z*log(z) + z*d) -&gt; O(z log z + C)
+</code></pre></div></div>
+
+<p>Compared to naive:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>O(n log n)
+</code></pre></div></div>
+
+<p>This approach drastically reduces inference cost for large datasets.</p>
+
+<h3 id="insertion-parsing">Insertion (Parsing)</h3>
+
+<p>For each new vector:</p>
+
+<ol>
+  <li>Compute each hash.</li>
+  <li>Insert into the hashtable.</li>
+</ol>
+
+<p><strong>Complexity:</strong> <code class="language-plaintext highlighter-rouge">O(n * d * h)</code>
+<strong>Memory:</strong> <code class="language-plaintext highlighter-rouge">O(n * h)</code></p>
+
+<p>Each point is stored in a bucket for each hash function.</p>
+
+<h2 id="probabilistic-analysis">Probabilistic Analysis</h2>
+
+<p>How do we know LSH will find the correct neighbors?</p>
+
+<p>Let:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">n</code> = total elements</li>
+  <li><code class="language-plaintext highlighter-rouge">b</code> = elements per bucket</li>
+  <li><code class="language-plaintext highlighter-rouge">p</code> = probability a hash bucket contains the nearest neighbor</li>
+  <li><code class="language-plaintext highlighter-rouge">q</code> = 1 - p</li>
+</ul>
+
+<p>With multiple hashes:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pr(1 hash) = p
+pr(2 hashes) = 1 - q^2
+pr(h hashes) = 1 - q^h
+</code></pre></div></div>
+
+<p>As <code class="language-plaintext highlighter-rouge">h → ∞</code>, probability of finding a neighbor approaches 1.</p>
+
+<p><strong>For LSH with vectors:</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hash(x) = floor((a·x - b)/w)
+x* = x + ε
+
+|a·(x - x*) / w| = ε / w
+</code></pre></div></div>
+
+<p>The difference between perturbed vectors scales with <code class="language-plaintext highlighter-rouge">ε / w</code>. Probability that two vectors fall into the same bucket:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Pr(|a·(x-y)/w| &lt; 1) = 2 * NormalCDF(w/d) - 1
+</code></pre></div></div>
+
+<p>This gives us a statistical bound for neighbor retrieval.</p>
+
+<h2 id="wrapping-up">Wrapping Up</h2>
+
+<p>We’ve explored:</p>
+
+<ul>
+  <li>Basic KNN</li>
+  <li>Efficient inference with LSH</li>
+  <li>Complexity and memory considerations</li>
+  <li>Probabilistic guarantees for correctness</li>
+</ul>
+
+<p>There are further optimizations in Rust, like using <code class="language-plaintext highlighter-rouge">Arc</code> to avoid cloning data, but those are beyond this post’s scope.</p>
+
+<p>I hope this post shows how a simple algorithm can become fascinating once you dive into performance and probabilistic analysis. Implementing KNN from scratch with these techniques is both instructive and practical.</p>
+
+<p>Happy coding!</p>
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       First Taste of Learnings <small>(2025-06-12)</small>
     </div>
     <div class="window-content">
