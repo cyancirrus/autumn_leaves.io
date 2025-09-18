@@ -89,6 +89,9 @@ body::before {
 }
 
 code {
+  display:inline;
+  white-space: normal;
+  /* font-family: 'Courier New', monospace; */
   font-family: monospace;
   background: rgba(100, 32, 32, 0.2); /* warm marroon when mixed with background chestnut brown */
   color: #541710;
@@ -96,11 +99,29 @@ code {
   border-radius: 4px;
 }
 
-  
-pre, code {
-	line-height: 1.2;
-    font-size: 0.8rem;
+
+pre {
+  display: block;
+  white-space: pre;               /* preserve line breaks exactly */
+  overflow-x: auto;               /* horizontal scroll if long lines */
+  padding: 0.8rem 1rem;
+  margin: 1rem 0;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
 }
+
+pre > code {
+  display: block;
+  white-space: inherit;    /* keep the pre’s pre formatting */
+  padding: 0;              /* use pre’s padding */
+  /* background: transparent; */
+}
+/* pre, code { */
+/* 	line-height: 1.2; */
+/*     font-size: 0.8rem; */
+/* 	font-family: monospace; */
+/* 	white-space: pre; */
+/* } */
 
 @media (max-width: 600px) {
   h1 {
