@@ -23,14 +23,14 @@ body::before {
 	content: "";
 	position: fixed;
 	top: 0; left: 0; right: 0; bottom: 0;
-	background: rgba(0, 0, 0, 0.55);
+	background: rgba(0, 0, 0, 0.6);
 	z-index: -1;
 }
 
 .content-wrapper {
 	border-radius: 12px;
 	padding: 2rem 3rem;
-	background: rgba(160,160,160,0.75);  /* a bit more opaque for readability on small screens */
+	background: rgba(160,160,160,0.9);  /* a bit more opaque for readability on small screens */
 	
 	max-width: 900px;
 	width: 100%;           /* allow it to shrink on small screens */
