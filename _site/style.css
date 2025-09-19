@@ -82,7 +82,8 @@ body::before {
 
 	.content-wrapper {
 		padding: 1rem 1.5rem;
-		background: rgba(160,160,160,0.7);  /* a bit more opaque for readability on small screens */
+		/* background: rgba(160,160,160,0.7);  /1* a bit more opaque for readability on small screens *1/ */
+		background: rgba(200,200,200,0.8);  /* a bit more opaque for readability on small screens */
 	}
 
 	.window {
