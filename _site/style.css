@@ -7,7 +7,7 @@ body {
 	background-repeat: no-repeat;
 	background-color: #7a1818;
 	/* background-attachment: fixed; */
-	color: #3d0808;
+	/* color: #3d0808; */
 	font-family: 'Georgia', serif;
 	
 	margin: 0;
@@ -30,7 +30,8 @@ body::before {
 .content-wrapper {
 	border-radius: 12px;
 	padding: 2rem 3rem;
-	background: rgba(160,160,160,0.9);  /* a bit more opaque for readability on small screens */
+	/* background: rgba(160,160,160,0.9);  /1* a bit more opaque for readability on small screens *1/ */
+	background: rgba(200,200,200,0.9);  /* a bit more opaque for readability on small screens */
 	
 	max-width: 900px;
 	width: 100%;           /* allow it to shrink on small screens */
@@ -44,6 +45,17 @@ body::before {
 	overflow: hidden;
 	font-family: sans-serif;
 	position: relative;
+    /* box-shadow: 0 4px 12px rgba(0,0,0,0.15); */ 
+}
+
+.window {
+    /* background: rgba(110,100,100,0.15); */
+    background: rgba(110,100,100,0.15);
+}
+
+
+.window + .window {
+	margin-top: 3rem;
 }
 
 .window-header {
