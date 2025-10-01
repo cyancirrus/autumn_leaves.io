@@ -79,7 +79,7 @@ Randomized SVD accelerates computations for large matrices by approximating the 
 
 ```text
 1. Generate a random matrix Ω ~ (m × k)
-2. Form Y = A * Ω
+2. Form Y = (A A') A * Ω
 3. Orthonormalize Y via QR decomposition → Q
 4. Project A into the smaller subspace: B = Qᵀ * A
 5. Compute deterministic SVD on B
