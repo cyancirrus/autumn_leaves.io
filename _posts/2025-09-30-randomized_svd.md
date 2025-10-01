@@ -1,9 +1,9 @@
-```
+---
 layout: post
 title: "Computational Implementation of Randomized SVD"
 date: 2025-09-18
 tags: [rust, machine-learning, backend, learning]
-```
+---
 
 [Randomized SVD Algorithm](https://github.com/cyancirrus/stellar-math/blob/main/src/solver/randomized_svd.rs)  
 [Golub-Kahan Implementation](https://github.com/cyancirrus/stellar-math/blob/main/src/decomposition/svd.rs)  
