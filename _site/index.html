@@ -14,6 +14,291 @@
 
 <div class="window">
     <div class="window-header">
+      Computational Implemention of Randomized SVD <small>(2025-09-18)</small>
+    </div>
+    <div class="window-content">
+      <p><a href="https://github.com/cyancirrus/stellar-math/blob/main/src/solver/randomized_svd.rs">Randomized Svd Algorithm</a>
+<a href="https://github.com/cyancirrus/stellar-math/blob/main/src/decomposition/svd.rs">Golub Kahan Implementation</a>
+<a href="https://github.com/cyancirrus/stellar-math/blob/main/src/decomposition/qr.rs">Optimized Qr Decomposition</a>
+<a href="https://github.com/cyancirrus/stellar-math/blob/main/src/decomposition/givens.rs">Givens Implementation</a></p>
+
+<p><a href="https://arxiv.org/pdf/0909.4061">Algorithm Source :: N. Halko, P. G. Martinsson, A. Tropp</a></p>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>Hello, today i wish to dig into one of the basic cores of numerical, scientific and statistical computing - Singular Value Decomposition.</p>
+
+<p>We’ll be exploring some implementation details for SVD with some detailed focus on performance.</p>
+
+<p>We will explore two main categories:</p>
+
+<ul>
+  <li>Optimizing some matrix expressions</li>
+  <li>Using statistics for a lower rank approximation</li>
+</ul>
+
+<p>We’ll be replicating the algorithm as detailed by within one of the siminal papers by Hako, Martinsson and Tropp “Finding Structure in Randomness”</p>
+
+<p>Svd is everywhere from PCA to helping provide reliable large scale computes with intelligent updates without Huge Cost when data size grows far to large.</p>
+
+<h2 id="what-is-svd">What is SVD</h2>
+
+<p>Before we get into reduced rank SVD we should go over some basic ideas.</p>
+
+<p><em>What is Singular Value Decomposition?</em></p>
+
+<p>Singular Value Decomposition intuitively is a transform of a linear mapping such that we have three different main opperations</p>
+
+<ul>
+  <li>Input Rotation</li>
+  <li>Scaling</li>
+  <li>Output Rotation</li>
+</ul>
+
+<p>Okay that was hmmmm, a little more technical than I wanted it..</p>
+
+<p>Consider the example: *We wish to model the chance that some will revist the hospital which we would have wished they would have been able to have a healthcare solution for already”</p>
+
+<p>We’ll consider that we have extensive demographic information</p>
+<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">-</span> age
+<span class="p">-</span> gender
+<span class="p">-</span> region
+<span class="p">-</span> prescription-adherence
+<span class="p">-</span> preventitive-care
+<span class="p">-</span> previous year activity
+<span class="p">-</span> bmi
+... 20 other variables
+</code></pre></div></div>
+<p>However our input space in practice but although our input space is really quite large. As our input space is vast we can look across different factors and see how they jointly interact.
+Imagine say that “age, preventive-care, and prescription-adherence” dominate the main signal of our data. Svd will transform these multiple variables into a singular representation.</p>
+
+<p>This new variable will contain the bulk of the joint signal or the latent (hidden or inferred) feature from this particular data. In fact the most dominant feature in this latent will be the first signular value and correspond to the first signular column. Each descending feature will then explain less and less signal from the data (due to definition and algorithmic implementation).</p>
+
+<p>Continuing with this line of thought we can immediately see that if our data is noisy and we wish to impose some normalization we would be able to only consider say perhaps the top K for the eigenvalues and then transform our input data in order to represent only this signal.</p>
+
+<p>The above idea is not only useful in Statistical Computing and DataScience, but also crucial for the performance of large scale matrices operations within ML and Engineering.</p>
+
+<h2 id="implementantation-of-the-svd">Implementantation of the SVD</h2>
+
+<h3 id="overview">Overview</h3>
+
+<p>1) Detemerinistic SVD</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Bidiagonalize the matrix
+- Golub Kahan via Householder of the column below the diagonal and the rows right of one element more than the diagonal
+// note if you try to diagonalize directly with equal to diagonal this is just equal to Schurs and will only converge to a diagonal when the matrix is SPD
+
+Chase the bulge down the bidiagonal and wait for convergence
+- Givens Algorithm and extensions are the common methods
+
+</code></pre></div></div>
+
+<p>2) Randomized SVD</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Generate a random matrix Omega, Omega ~ Reduce rank, ie a subset of the features
+O := Omega ~ Matrix[m, k]
+Y = (AA')AO 
+=&gt; Y ~ Matrix[m, k]
+
+Normalize Y via QR
+QR(Y) -&gt; (Q, R)
+A' = Q*A
+
+Run the deterministic SVD on the smaller matrix A'
+</code></pre></div></div>
+
+<h3 id="qr-algorithm-overview">QR Algorithm: Overview</h3>
+
+<p>Lets first start to speak of this transformation as it’s used in the Randomized SVD algorithm but also it’s main basis for the Golub Kahan Algorithm (the algo which creates the bidiagonal, prior to bulge chasing which creates the SVD).</p>
+
+<p>The most important part of QR is reconstruction ie when we seperate into 2 parts the orthogonal transformation and the scaling upper triangle matrix we receive the same input.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>QR(A) = QR;
+QR == A;
+</code></pre></div></div>
+
+<p>QR uses a product of householder transforms, which is essentially a reflection or rotation across an axis such that the resulting variable will be a multiple of e[i].</p>
+
+<p>For the first dimension</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>H := Housholder
+x := (1.0, 2.0, -3.14, 2.718)
+
+
+// find the rotation such that for i := 1
+
+// note each householder is a rank one outer product and is therefore symmetric
+Q[i] := (I - Buu');
+
+Q[i]x = sign(1.0) * (1.0, 0, 0, 0 ) * ||x|| 
+Q[i]x = sign x[i] * e[i] ||x||
+</code></pre></div></div>
+
+<p>Recalling that rotations and reflections are orthogonal matrices, we then can create the following scheme</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Now we wish to reflect our data through this space so that everything zeros beneath the diagonal
+
+Q[n] * Q[n-1] * .. * Q[1] A  = R
+
+// noting from above that they are orthogonal
+=&gt; Q'Q = I
+=&gt; (Q[n] * .. * Q[1])' (Q[n] * .. * Q[1]) A  = (Q[n] * .. * Q[1])' R
+A = (Q[n]*..*Q[1])' R
+A = Q[1]'*..*Q[n]' R
+
+// Remembering that they're symmetric from (I - Bvv')
+A := Q[1]*..*Q[n] R 
+A = QR
+Q := Product Q[1]..Q[n];
+</code></pre></div></div>
+
+<p>Awesome! We just got the basic maths for Householder skipping some minor details - I recomment the book <em>Numerical Linear Algebra and Applications by Biswa Nath Datta</em>, it starts from zero and can take you up to reading papers and implementing algorithms in papers or algorithms for which you can derive invariants.</p>
+
+<h3 id="qr-algorithm-compute">QR Algorithm: Compute</h3>
+
+<p>Why did I just read that, you might be asking yourself dear reader, it’s because we can do some incredibly interesting computational optimizations with only the above information. Literally with the Above, we can reduce a matrix multiplication of unseen <em>A</em> against <em>Q</em> and have instead of <code class="language-plaintext highlighter-rouge">O(n^4)</code> for the calculation of QR we can have it be <code class="language-plaintext highlighter-rouge">O(n^3)</code>. This is incredibly pivotal and transforms the QR Algorithm from something “theoretically interesting” to of practical importance <em>subnote we will be using the following optimizations for the calculation of Golub Kahan - bidiagonalization</em>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Recalling both of the following
+let Q := Product Q[1]..Q[n];
+Q[i] := (I - Buu');
+
+// Imagine we now wish to take the resultant of a matrix multiplied by Q ie
+Qx = Output
+
+// We can partition Q
+let H[k] := Product 0..k Q[k]
+
+this now infers the following
+
+Q[k] = Q[k-1](I - B[k]v[k]v[k]')
+Q[k] = Q[k-1] - B[k]Q[k-1]v[k]v[k]')
+Q[k]
+
+// Noting that this is just a Matrix * a vector * outer product
+let w = B*Q[k-1]v[k];
+=&gt;
+Q' = Q - wv';
+</code></pre></div></div>
+<p>And note that this can be done for all matrices, the previous Q wasn’t special for the right hand optimization ie</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>QA
+Q1*..*(I-buu')A
+
+our recurrence for A:
+let w := b*u'A;
+
+A -= u'w'
+</code></pre></div></div>
+<p>and for left hand side</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>QA
+A*(I-buu')*..* Qn
+
+our recurrence for A:
+let w := bAu;
+
+A -= wu'
+</code></pre></div></div>
+
+<p>We have now managed to reudce the complexity of QR copute and computation significantly this has gotten a little abstract for myself so lets look at the underlying code</p>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pub</span> <span class="k">fn</span> <span class="nf">qr_decompose</span><span class="p">(</span><span class="k">mut</span> <span class="n">x</span><span class="p">:</span> <span class="n">NdArray</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">QrDecomposition</span> <span class="p">{</span>
+    <span class="o">...</span>
+        <span class="k">let</span> <span class="n">proj</span> <span class="o">=</span> <span class="nf">householder_params</span><span class="p">(</span><span class="n">column_vector</span><span class="p">);</span>
+        <span class="c1">// x'A</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="k">in</span> <span class="n">o</span><span class="o">..</span><span class="n">cols</span> <span class="p">{</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="n">o</span><span class="o">..</span><span class="n">rows</span> <span class="p">{</span>
+                <span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">proj</span><span class="py">.vector</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">o</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span><span class="py">.data</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">cols</span> <span class="o">+</span> <span class="n">j</span><span class="p">];</span>
+            <span class="p">}</span>
+            <span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*=</span> <span class="n">proj</span><span class="py">.beta</span><span class="p">;</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="n">o</span><span class="o">..</span><span class="n">rows</span> <span class="p">{</span>
+                <span class="n">x</span><span class="py">.data</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">cols</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">proj</span><span class="py">.vector</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">o</span><span class="p">]</span> <span class="o">*</span> <span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+            <span class="p">}</span>
+            <span class="n">w</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0_f32</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="nn">QrDecomposition</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">,</span> <span class="n">card</span><span class="p">,</span> <span class="n">projections</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+<p>The main part being highlighted here is the reduction in the computation cost underneath construction and a subnote that this is also available upon prediction very similar application of logic.</p>
+
+<h3 id="qr-to-golub-kahan">QR to Golub Kahan</h3>
+
+<p>There are several main differences between QR and Golub Kahan, the first being that QR just zeros below the diagonal for the construction of the upper triangular R matrix, and Golub Kahan chases the overhang ie row values to the right of the bidiagonal and column values blow the main diagonal - and that’s really <em>it</em>.</p>
+
+<p>Golub Kahan is just the application of repeated zeroing procedures as we scan down the matrix. leaving the only non-zero entries within the 2 width band of the diagonals of a(i, i) and a(i, i+1).</p>
+
+<p>Lets take a closer look of what that would look like</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>In order to zero'th the j'th column we would perform
+
+Q[j]A = (I -buu')A[k]
+
+and to zero'th the i'th row we would need to first transpose the matrix and then just zero below the intended target.
+
+A[k+1] = Qi(A[k]')
+
+lets continue for the next round, eliminating some of the indices for readability let C := 
+
+Dropping the Q prefix for now as we're considering both Column and Row zeroing
+
+c1 := Householder transform in order to zero column 1
+r1 &lt;- Householder transform in order to zero for row 1 past the second entry
+
+first step
+gk' = c1 * A
+
+zero beyond the row, which is equal to transpose and column zero
+gk' = r1*(c1*A)'
+gk' = r1 * A' * c1'
+
+no lets do the column row just like in our Golub Kahan procedure
+gk' = c2 * (r1 * A' * c1')'
+gk' = c2 * c1 * A * r1'
+
+recalling that they're symmetric and extending the pattern
+qk := product column_zeroing[i] A row_zeroing[i];
+</code></pre></div></div>
+
+<p>So all we do is iterate back and forth between the column zeroing behavior and the row zeroing behavior until we arrive at our bidiagonal. The exact same optimization in QR also provided the life blood for the slightly more advanced implementation in Golub Kahan!</p>
+
+<h2 id="statistical-optimization">Statistical Optimization</h2>
+
+<p>Great so we’ve had an in depth on how to optimize certain main core parts of this algorithm, and while all of this sounds pretty great, there’s nothing really <em>revolutionary</em>.</p>
+
+<p>Lets now dig into the best part of this whole exploration - the Randomized SVD.
+Lets consider the following example, say our matrix <code class="language-plaintext highlighter-rouge">source ~ 10_000 x 10_000</code> and we wish to compute a matrix multiplication with another <code class="language-plaintext highlighter-rouge">target ~ 10_000 x 10_000</code> matrix.</p>
+
+<p>Naive implementation would have that our entire computational cost is <code class="language-plaintext highlighter-rouge">O(n^3) = 1e5^3 = 1e15</code> <em>One Trillion FLOPS!!!!</em>.
+However consider we do Randomized with SVD because we know there is underlying signal within our data and we chose <code class="language-plaintext highlighter-rouge">k = 1_000</code>.</p>
+
+<p>Entire Flops for truncated representations’ calculation</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+let T := Target  ~ Matrix[10_000, 10_000];
+// Truncated
+let S := Source ~ Matrix[10_000, 10_000];
+=&gt; O(SVD[k]*T) = O(n^2/k) 
+
+
+Naive :: O(n^3)
+SVD[l] :: O(n^2*k)
+
+Computational Work Savings // we now do x% of work
+
+Percent Work := O(n^2*k)/O(n^3)
+**** Percent Work = n/k ****
+</code></pre></div></div>
+
+<p>For k sampled at 10% of the total dimensionality we only need to do 10% work which will dramatically reduce number of computations.
+Incredibly important is we often don’t need such a rich representation of K, but one can imagine this compounding over numerical pipelines.
+This is the magical part of SVD, is that it’s compounded affects throughout the pipeline for main workhouse matrix opperations.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>I hoped you had some fun exploring some of the optimizations within these algorithms. It’s amazing how we can find optimizations both within algebraic, statistical and computational structures.
+I hope you saw something you could latch on to and feel free to explore the code-base, more and more unit tests are coming as the contracts and api is starting to stabalize.</p>
+
+<p>Thanks so much for reading</p>
+
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       K-Nearest Neighbors from Scratch <small>(2025-09-18)</small>
     </div>
     <div class="window-content">
