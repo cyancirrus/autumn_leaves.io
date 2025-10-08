@@ -83,105 +83,231 @@ Node[3], // contains ~ 1/4 data (was previously node 2)
 Node[4], // contains ~ 1/4 data (was previously node 2) 
 ```
 
+## Statistical Performance of the different Models
 
+The following chart has been drawn from the Boston Housing Data example which for different features predicts the median value of the house. The data is a bit on the smaller types of datasets and has a bit of variance which is important when analyzing the perforamnce of the methods.
 
-
-## Implementing SVD
-
-### Deterministic SVD
-
-The classic algorithm involves two steps:
-
-1. **Bidiagonalization**
-
-   * Golub-Kahan procedure using Householder reflections.
-   * Columns below the diagonal and rows beyond the first superdiagonal are zeroed.
-
-2. **Bulge chasing**
-
-   * Givens rotations and extensions diagonalize the bidiagonal matrix.
-   * This produces the singular values and vectors.
-
-> Note: Direct diagonalization without bidiagonalization generally only converges for symmetric positive-definite matrices.
-
-
-
-### Randomized SVD
-
-Randomized SVD accelerates computations for large matrices by approximating the subspace spanned by the top singular vectors. The procedure is:
-
-```text
-1. Generate a random matrix Ω ~ (m × k)
-2. Form Y = (A A') A * Ω
-3. Orthonormalize Y via QR decomposition → Q
-4. Project A into the smaller subspace: B = Qᵀ * A
-5. Compute deterministic SVD on B
-6. Recover approximate U, Σ, V from the small SVD
-```
-
-This reduces computational cost while capturing the dominant signal, which is often all you need in practical applications.
-
-
-
-## QR Decomposition: The Core Building Block
-
-QR decomposition is central to both randomized SVD and Golub-Kahan. Given a matrix `A`, we find:
+Each model was trained 36 times, as there's a bit of variance depending upon the subset that is selected (the data is incredibly small).
+The measure that i've utilized is total variance explained which is defined as
 
 ```
-A = Q * R
+// Sum squares error of the model is defined as
+
+SSE(Model) := Sum (yi - yi^)^2
+SSE(Data) := Sum (yi - mean)^2
+
+// abbreviated as tve
+Total Variance Explained := 1 - SSE(model) / SSE(Data);
 ```
 
-Where `Q` is orthogonal and `R` is upper-triangular. Key ideas:
+[Model Performance](tree_based_models_total_variance_explained.png)  
 
-* Householder reflections rotate vectors so that elements below the diagonal become zero.
-* Reflections are rank-one symmetric matrices: `Q[i] = I - β * u * uᵀ`.
-* By chaining reflections, we compute `Q = Q[1] * Q[2] * ... * Q[n]`.
+_*All TVE metrics are TVE on the unseen data from training.*_
 
-#### Computational Optimization
+*Random Forest* - Average TVE 78%
+- Incredibly strong performance over all iterations this always has a strong perforamnce and is one of the methods which will help to debias the training data in order to help the metho perform well upon new unseen data. Average 
 
-Naively, applying `Q` to another matrix costs `O(n^4)` for dense matrices. But by exploiting the structure of Householder reflections, we can reduce this to `O(n^3)`:
+*Gradient Boosting* - Average TVE 62%
+- Gradient boosting is normally an incredibly strong technique although the data size has incredibly defeated this method, there's not enough data variaty nor enough points in order to recursively fit the data appropriately. The model has incredibly overfit the data, parameters have not been grid searched but several have been tried. This model class is not appropriate for this dataset. Note the massive amount of variance between the lowest score for Gradient Boosted Model compared to it's Most Performant, the range is incredibly concerning and appears not stable.
 
+*Decision Tree* - Average TVE 67%
+- Base model and amazing transparency, some overfitting to the sample data which can be seen by it's relative performance to RandomForest. Can go through node by node in order to analyze which features were important. Overall a solid pick for the housing data averaging 65% Total Variance Explained for different samplings on the test dataset. Appropriate method for this problem
+
+## Decision Tree Extensions
+
+There are two main ways that we can extend the humble decision tree
+
+### Random Forests
+
+A random forest is essentially a collection of decision trees. Due to the fact that we deterministically use the best split for a decision tree, we do need to subsample either/or both - the data which are consdiered, or the number of dimensions which are considered at each step.
+
+After training we now have a large number of Decision Trees - apply named a Forest, and in order to perform a prediction
+```rust 
+let unseen_data = data;
+let prediction = 0;
+for this_tree in forest {
+   prediction += this_tree.predict(unseen_data);
+}
+let end_prediction =  prediction / number_of_trees
+end_prediction
+```
+
+Random forest helps to incredibly debias the overfitting common in decision trees and other tree based methods.
+
+
+### Gradient Boosting
+
+Gradient boosting is the other main way in order to extend decision trees. Instead of creating multiple trees and then averaging the output we recursively fit the error from the previous decision tree.
+
+Think of it like this, we fit the first decision tree, and our prediction for the node isn't perfect, so then we look at all of our predictions and then the error. For this remaining error we then fit a new decision tree.
+
+For the end prediction we add sum all of the decision trees output as each decision tree was fitting `y-yhat` which when we sum we unfold all of them and get
+```md
+prediction = y0 + ('y0 - y1) + (y1' - y2) + .. + ('yn-1 - yi);
+// each y0-y1 is correcting the error of the previous iteration
+prediction = y0 + error_correction[1].. + error_correction[n];
+```
+
+The predicted output isn't exactly equal, this is how the error correction term is obtained
+
+
+## Elphabas Look at the Great Wizard of Oz - Tree Extensions and their Implementaitons
+
+Everyone wishes to review the most complex methods implementations - so lets review these first.
+*Gradient boosting* - lets review the complexity! - Wait ... this looks incredibly simple...
 ```rust
-// Householder-based QR update
-let w = beta * Q_km1 * v_k;
-A -= w * v_k';
+use crate::learning::decision_tree::{
+    DecisionTree,
+    DecisionTreeModel
+}; 
+pub struct GradientBoost {
+    trees:usize,
+    forest: Vec<DecisionTreeModel>,
+}
+impl GradientBoost {
+    pub fn new(data:&mut Vec<Vec<f32>>, trees:usize, nodes:usize, obs_sample:f32, dim_sample:f32) -> Self {
+        if data.is_empty() || data[0].is_empty() { panic!("data is empty"); }
+        let n_obs = data[0].len();
+        let dims = data.len();
+        let target_idx = data.len()-1;
+        let mut sample = vec![0_f32; dims];
+        let mut forest = Vec::with_capacity(trees);
+        for _ in 0..trees {
+            let tree = DecisionTree::new(data, obs_sample, dim_sample).train(nodes);
+            for idx in 0..n_obs {
+                for d in 0..dims { sample[d] = data[d][idx]; }
+                let pred = tree.predict(&sample);
+                data[target_idx][idx] -= pred;
+            }
+            forest.push(tree);
+        }
+        Self{
+            trees,
+            forest,
+        }
+    }
+    pub fn predict(&self, data:&[f32]) -> f32 {
+        let mut prediction = 0_f32;
+        for tree in &self.forest {
+            prediction += tree.predict(data); 
+        }
+        prediction
+    }
+}
 ```
 
-This optimization is crucial in practice, especially for large-scale pipelines and in Golub-Kahan bidiagonalization.
+*Random forest* - this one must be incredibly complex! - Wait... it's exactly as trivial as the Gradient Boost implementation!
+```
+use crate::learning::decision_tree::{
+    DecisionTree,
+    DecisionTreeModel
+}; 
+pub struct RandomForest {
+    trees: usize,
+    forest: Vec<DecisionTreeModel>,
+}
+impl RandomForest {
+    pub fn new(data:&Vec<Vec<f32>>, trees:usize, nodes:usize, obs_sample:f32, dim_sample:f32) -> Self {
+        let forest:Vec<DecisionTreeModel> = (0..trees).into_iter().map(|_| {
+            let mut tree = DecisionTree::new(data, obs_sample, dim_sample);
+            tree.train(nodes)
+        }).collect();
+        Self { trees, forest }
+    }
+    pub fn predict(&self, data:&[f32]) -> f32 {
+        let mut cumulative = 0_f32;
+        for tree in &self.forest {
+            cumulative += tree.predict(data);
+        }
+        cumulative / self.trees as f32
+    }
+}
+```
+
+Incredibly confusing, that's more lackluster than the reveal of Oz! They're just wrappers for the decision tree implementation. _Remember they *are* model extensions of the decision tree itself_.
+Should we take a look at the Data Tree implementation?
+
+## Decision Tree Implementation
+
+Decision Trees actually have a fascinating implementation and their detail connects deeply to the usability of Random Forests and Gradient Boost.
+
+### Computational Complexity
+
+For each decision tree we must look at every potential split. Lets consider the idea - for each feature create a list of the input rows, but sorted by the dimension values themself.
+
+Total cost for creating the sorted list for every dimension `d`.
+```md
+// Sort's cost is O( n log n);
+O( d * n log n )
+```
+For this implementation I will be looking at the Sum of Squared Errors (SSE). For each dimension in order to find the best split we partition a current node's values into two nodes. As the statement is if-else, the split node will partition the data into two regions
+
+```md
+//For each member of the node
+
+left_node := dimension_value <= partition_value;
+right_node := dimension_value > partition_value;
+```
+
+We can use the following relation for variance
+```
+BaseNode := unsplit_node
+BaseNode ::
+  sum_squares // sum of y[i] * y[i] for members of this node
+  sum_linear // sum of y[i] for members of the node
+
+BaseNode SSE := sum_squares - sum_linear * sum_linear / cardinality; // cardinality is just number of members;
 
 
+// This will be the new variance if we were to split at this given point
+SplitNodeSSE = SSE(left_node) + SSE(right_node)
 
-### QR → Golub-Kahan
+// We calculate this on a running basis
+LeftNode SSE := sum_squares - sum_linear * sum_linear  / cardinality;
 
-Golub-Kahan extends QR ideas to bidiagonalization:
+// And now we can derive the right nodes new SSE
+inferred_sum_squares = BaseNode.sum_squares - LeftNode.sum_squares;
+inferred_sum_linear = BaseNode.sum_linear - LeftNode.sum_linear;
+inferred_cardinality = BaseNode.cardinality - LeftNode.cardinality;
 
-* Columns below the diagonal are zeroed (like QR).
-* Rows beyond the superdiagonal are zeroed.
-* Iterating column and row zeroing produces the bidiagonal matrix.
-
-The same optimizations used in QR reduce the cost of these operations, making the algorithm tractable for large matrices.
-
-
-
-## Statistical Optimization: The Randomized Payoff
-
-Suppose we have two `10,000 × 10,000` matrices. Naively, computing `A * B` requires `O(n^3) ≈ 10^12` FLOPS—a trillion operations!
-
-With randomized SVD, if we approximate with rank `k = 1,000`:
+RightNode SSE := inferred_sum_squares - inferred_sum_linear * inferred_sum_linear / inferred_cardinality; 
 
 ```
-Flops ≈ O(n^2 * k) = O(10^8 * 1e3) = 10^11
+
+Amazing! this now means that for each potential split that our total cost for determining the optimal split is actually proporitional to the number of records!
+This is _la coup de grace_ of the implementation. This is what enable the implementation to be performant and directly drives the reason for the sorted dimensions.
+
+This means that we can simply iterate over the sorted dimensions and check if our split is optimal, linearly!
+The only caveat is that when we find the new split, we simply need to sort the other dimensions. I find this incredibly beautiful and elegant, lets look at the cost.
+
+
+```md
+// cost for determining the optimal split for
+let n := number of observations in the data;
+let s := number of desired nodes // splits
+let d := number of dimensions considered
+
+// cost for all splitting of nodes
+// O( find_the_best_split + sorting_other_dimensions)
+
+O( s * n * d  + d * logn)
 ```
 
-We do only ~10% of the work, while preserving the dominant signal. This dramatically accelerates pipelines in ML and scientific computing, compounding over repeated matrix operations.
+Finally we can show that the total cost for training the entire decision tree occurs
+```
+// O( initial_sort_dimension_cost + splitting_of_nodes )
+O( d * nlog(n) + s * n * d)
+
+// s should be << log(n)
+
+// End Cost -- Assomptitically equal to the initial cost of sorting the dimensions!!
+O( d * nlog(n));
+```
 
 
-## Wrapping Up
+## Defying Gravity
 
-SVD is a powerful tool bridging linear algebra, statistics, and computational optimization. Through careful QR and Golub-Kahan implementations, we can handle large matrices efficiently. Randomized SVD then provides a statistical shortcut, allowing us to approximate dominant structures with far less computation.
+Decision Trees are amazingly powerful tools, the most important part is to ensure that a coherent and optimal decision tree base, then the implementations are more straightforward than Shiz Universities' reaction to Elphaba's green skin!
 
-The combination of algebraic tricks, computational insights, and statistical reasoning makes this one of the most elegant examples of applied numerical linear algebra.
-
-Explore the [codebase](https://github.com/cyancirrus/stellar-math) to see these ideas in action—and watch the FLOPS disappear.
 
 Thanks for reading!
