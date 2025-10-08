@@ -100,7 +100,7 @@ SSE(Data) := Sum (yi - mean)^2
 Total Variance Explained := 1 - SSE(model) / SSE(Data);
 ```
 
-[Model Performance](tree_based_models_total_variance_explained.png)  
+[Model Performance](assets/tree_based_models_total_variance_explained.png)  
 
 _*All TVE metrics are TVE on the unseen data from training.*_
 
@@ -112,6 +112,13 @@ _*All TVE metrics are TVE on the unseen data from training.*_
 
 *Decision Tree* - Average TVE 67%
 - Base model and amazing transparency, some overfitting to the sample data which can be seen by it's relative performance to RandomForest. Can go through node by node in order to analyze which features were important. Overall a solid pick for the housing data averaging 65% Total Variance Explained for different samplings on the test dataset. Appropriate method for this problem
+
+_In order to run the above models yourself simply clone stellar_math and run_
+```bash
+// see if you can find better metadata parameters!
+cargo run --example trees
+open tve_chart.png
+```
 
 ## Decision Tree Extensions
 

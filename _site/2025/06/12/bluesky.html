@@ -10,14 +10,14 @@
 
 <p>Recently, I’ve been trying to wrap my head around using async within Rust.<br />
 I had some prior experience using async in Python, mainly to make non-blocking calls for embeddings of identified terms when they were independent.<br />
-Although I had some background, I was still greatly intimidated — many developers, who appeared far more talented, spoke about how difficult it was to understand Rust’s async model.</p>
+Although I had some background, I was still greatly intimidated - many developers, who appeared far more talented, spoke about how difficult it was to understand Rust’s async model.</p>
 
-<h3 id="dont-be-scared--jump-in">Don’t Be Scared — <em>Jump In</em></h3>
+<h3 id="dont-be-scared---jump-in">Don’t Be Scared - <em>Jump In</em></h3>
 
 <p>Surprisingly, transitioning my message-board-like or BlueSky-like app from a LeetCode solution into a fully async backend wasn’t terribly difficult.<br />
 First, I worked through several async problems focused on using notifications and streaming. Then, without much further practice, I jumped in.</p>
 
-<p>The API structure — being mostly async — was really about learning the tools:</p>
+<p>The API structure - being mostly async - was really about learning the tools:</p>
 <ul>
   <li><strong>Axum</strong> for the API tree and server</li>
   <li><strong>Serde</strong> to handle JSON and the barrier between client and server</li>
@@ -25,13 +25,13 @@ First, I worked through several async problems focused on using notifications an
   <li><strong>std::sync::Arc</strong> for atomic reference counting so I could clone handles without cloning the actual data</li>
 </ul>
 
-<p>But my <em>favorite</em> package — the standout for me…
+<p>But my <em>favorite</em> package - the standout for me…
 – <strong>DashMap</strong> an amazing tool allowing you to manage interior mutability</p>
 
 <h2 id="what-the-data-looked-like-on-the-backend">What the Data Looked Like on the Backend</h2>
 
 <p>One of the main APIs I needed to port was <code class="language-plaintext highlighter-rouge">fn follow(...)</code>, which takes in a <code class="language-plaintext highlighter-rouge">followee_id</code> and a <code class="language-plaintext highlighter-rouge">follower_id</code>.<br />
-I wanted users to safely write to their own portion of the data — i.e., a user (the follower) clicks <em>follow</em> on another user (the followee), and we remember this information.</p>
+I wanted users to safely write to their own portion of the data - i.e., a user (the follower) clicks <em>follow</em> on another user (the followee), and we remember this information.</p>
 
 <p>This was tricky to model. The user should only be able to modify their own data. It should also be fully async.</p>
 
@@ -44,7 +44,7 @@ I used a set to enable quick <code class="language-plaintext highlighter-rouge">
 <h3 id="first-iteration">First Iteration</h3>
 
 <p>To model the problem, I initially reached for a <code class="language-plaintext highlighter-rouge">Mutex</code>.<br />
-Mutexes were useful when solving async LeetCode problems, allowing mutation within async code — so I started there.</p>
+Mutexes were useful when solving async LeetCode problems, allowing mutation within async code - so I started there.</p>
 <div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Mutex</span><span class="o">&lt;</span><span class="n">HashSet</span><span class="o">&lt;</span><span class="n">UserId</span><span class="o">&gt;&gt;</span>
 </code></pre></div></div>
 
@@ -66,16 +66,16 @@ Time to explore other structures beyond what I’d seen in my limited Rust async
 
 <p>There were only a few code changes: <code class="language-plaintext highlighter-rouge">.lock().await</code> became <code class="language-plaintext highlighter-rouge">.read().await</code> or <code class="language-plaintext highlighter-rouge">.write().await</code>. Overall, the changes were minimal.</p>
 
-<p><code class="language-plaintext highlighter-rouge">RwLock</code> was a major improvement over <code class="language-plaintext highlighter-rouge">Mutex</code> — while <code class="language-plaintext highlighter-rouge">Mutex</code> allows only a single user or thread to access the data at a time, <code class="language-plaintext highlighter-rouge">RwLock</code> allowed multiple readers in parallel.</p>
+<p><code class="language-plaintext highlighter-rouge">RwLock</code> was a major improvement over <code class="language-plaintext highlighter-rouge">Mutex</code> - while <code class="language-plaintext highlighter-rouge">Mutex</code> allows only a single user or thread to access the data at a time, <code class="language-plaintext highlighter-rouge">RwLock</code> allowed multiple readers in parallel.</p>
 
-<p>…but the problem remained: most actions cause side effects (writes), and a single write on the outermost <code class="language-plaintext highlighter-rouge">RwLock</code> blocked the entire backend — even reads!<br />
-Multiple users writing to different locations — they <em>should</em> be able to write independently.<br />
+<p>…but the problem remained: most actions cause side effects (writes), and a single write on the outermost <code class="language-plaintext highlighter-rouge">RwLock</code> blocked the entire backend - even reads!<br />
+Multiple users writing to different locations - they <em>should</em> be able to write independently.<br />
 This separation had to be modelable. How could I drive that separation?</p>
 
 <h3 id="dashmap-the-sleeper-wizzard">DashMap: The Sleeper Wizzard</h3>
 
 <p>The problem seemed so simple: just enable read-write locking on the interior data.<br />
-Enter <strong>DashMap</strong> — like Gandalf cresting the hill at Helm’s Deep!</p>
+Enter <strong>DashMap</strong> - like Gandalf cresting the hill at Helm’s Deep!</p>
 
 <p>DashMap allows users to mutate their private data without needing explicit mutability, and it’s a near drop-in replacement for <code class="language-plaintext highlighter-rouge">HashMap</code>.</p>
 
@@ -87,7 +87,7 @@ Enter <strong>DashMap</strong> — like Gandalf cresting the hill at Helm’s De
 </code></pre></div></div>
 
 <p>This helped clean up parts of Axum’s server model and the guarantees needed to build the API tree.<br />
-DashMap enabled private mutation — as long as you handled the interior structure correctly, e.g.:</p>
+DashMap enabled private mutation - as long as you handled the interior structure correctly, e.g.:</p>
 <div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">DashMap</span><span class="o">&lt;</span><span class="n">UserId</span><span class="p">,</span> <span class="n">RwLock</span><span class="o">&lt;</span><span class="n">HashSet</span><span class="o">&lt;</span><span class="n">UserId</span><span class="o">&gt;&gt;&gt;</span>
 </code></pre></div></div>
 
@@ -96,7 +96,7 @@ I <em>cannot</em> recommend the library enough if you’re facing a similar mode
 
 <h2 id="takeaway">Takeaway</h2>
 
-<p>Not only is Rust async — and its tooling — becoming ever more mature and viable in production, but…</p>
+<p>Not only is Rust async - and its tooling - becoming ever more mature and viable in production, but…</p>
 
 <p><strong>Don’t be scared to jump in.</strong><br />
 You’ve already solved problems that felt impossible at the time. This is just another challenge.</p>
@@ -106,7 +106,7 @@ You’ve already solved problems that felt impossible at the time. This is just 
 <p>Programming isn’t just writing code for things you already know.<br />
 Programming <em>is</em> solving new problems, exploring the unknown, and discovering better solutions.</p>
 
-<p>Thanks so much for reading — see you in the next post!</p>
+<p>Thanks so much for reading - see you in the next post!</p>
 
     </div>
   </div>
