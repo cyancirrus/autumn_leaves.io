@@ -17,176 +17,172 @@
       Implementation of Tree based Models <small>(2025-10-08)</small>
     </div>
     <div class="window-content">
-      <p><a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/gradient_boost.rs">Gradient Boost Implementation</a><br />
-<a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/random_forest.rs">Random Forest Implementation</a><br />
-<a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/decision_tree.rs">Decision Tree Implementation</a></p>
-
-<h3 id="introduction">Introduction</h3>
-<p>Machine learning is based upon a few based structures and methods - the perceptron, the decision tree, expectation maximization, clustering, dimension reduction.
-Today we’ll be going through how to implement the following ML Algorithms:</p>
-
-<ul>
-  <li>Gradient Boosting</li>
-  <li>Random Forests</li>
-  <li>Decision Tree</li>
-</ul>
-
-<h3 id="a-first-glance-of-the-statistical-performance">A First Glance of the Statistical Performance</h3>
+      <h3 id="a-first-glance-of-the-statistical-performance">A First Glance of the Statistical Performance</h3>
 
 <p><img src="./assets/tree_based_models_total_variance_explained.png" alt="Model Performance" /></p>
 
-<p>The above chart has been drawn from the Boston Housing Data example which for different features predicts the median value of the house. The data is a bit on the smaller types of datasets and has a bit of variance which is important when analyzing the perforamnce of the methods.</p>
+<p>The above chart is drawn from the <strong>Boston Housing dataset</strong>, which predicts the median value of houses from a handful of features. The data is small and noisy — which is <em>actually perfect</em> for testing robustness.</p>
 
-<p>Each model was trained 36 times, as there’s a bit of variance depending upon the subset that is selected (the data is incredibly small).
-The measure that i’ve utilized is total variance explained which is defined as</p>
+<p>Each model was trained 36 times. The measure used is <strong>Total Variance Explained (TVE)</strong>:</p>
 
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Sum squares error of the model is defined as
+<p>Total Variance Explained (TVE), Sum Squares Error (SSE) are defined as</p>
 
-SSE(Model) := Sum (yi - yi^)^2
-SSE(Data) := Sum (yi - mean)^2
+<blockquote>
+  <p>$SSE(Model) := Sum (y_i - \hat{y_i})^2$</p>
+</blockquote>
 
-// abbreviated as tve
-Total Variance Explained := 1 - SSE(model) / SSE(Data);
-</code></pre></div></div>
+<blockquote>
+  <p>$SSE(Data)  := Sum (y_i - mean)^2$</p>
+</blockquote>
 
-<p><em>*All TVE metrics are TVE on the unseen data from training.*</em></p>
+<blockquote>
+  <p>$TotalVarianceExplained := 1 - \frac{SSE(model)}{SSE(Data)}$</p>
+</blockquote>
 
-<p><em>Random Forest</em> - Average TVE 78%</p>
+<p><em>All TVE metrics below refer to unseen test data.</em></p>
+
 <ul>
-  <li>Incredibly strong performance over all iterations this always has a strong perforamnce and is one of the methods which will help to debias the training data in order to help the metho perform well upon new unseen data. Average</li>
+  <li>
+    <p><strong>Random Forest — Average TVE ~78%</strong><br />
+Consistently strong across runs. The ensemble effect helps debias training data and generalize well.</p>
+  </li>
+  <li>
+    <p><strong>Gradient Boosting — Average TVE ~62%</strong><br />
+Overfits heavily due to small sample size. Gradient boosting shines with large, diverse datasets. Here, it’s unstable — high variance between best and worst runs.</p>
+  </li>
+  <li>
+    <p><strong>Decision Tree — Average TVE ~67%</strong><br />
+Transparent, interpretable, slightly overfits but remains solid. You can inspect node-by-node which features drive predictions.</p>
+  </li>
 </ul>
 
-<p><em>Gradient Boosting</em> - Average TVE 62%</p>
-<ul>
-  <li>Gradient boosting is normally an incredibly strong technique although the data size has incredibly defeated this method, there’s not enough data variaty nor enough points in order to recursively fit the data appropriately. The model has incredibly overfit the data, parameters have not been grid searched but several have been tried. This model class is not appropriate for this dataset. Note the massive amount of variance between the lowest score for Gradient Boosted Model compared to it’s Most Performant, the range is incredibly concerning and appears not stable.</li>
-</ul>
-
-<p><em>Decision Tree</em> - Average TVE 67%</p>
-<ul>
-  <li>Base model and amazing transparency, some overfitting to the sample data which can be seen by it’s relative performance to RandomForest. Can go through node by node in order to analyze which features were important. Overall a solid pick for the housing data averaging 65% Total Variance Explained for different samplings on the test dataset. Appropriate method for this problem</li>
-</ul>
-
-<p><em>In order to run the above models yourself simply clone stellar_math and run</em></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// see <span class="k">if </span>you can find better metadata parameters!
+<p>To reproduce:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/cyancirrus/stellar-math
 cargo run <span class="nt">--example</span> trees
 open tve_chart.png
 </code></pre></div></div>
 
-<h3 id="preliminaries---what-is-a-decision-tree">Preliminaries - What is a Decision Tree?</h3>
+<h3 id="introduction">Introduction</h3>
 
-<p>Lets consider the lowly if-else statement, this way we can build intuition for what is a decision tree. Consider the question on whether I should bring an umbrella with my outside…</p>
+<p>Machine learning models often emerge from a few core structures — perceptrons, decision trees, EM, clustering, and dimensionality reduction.
+Here, we’ll explore how to implement three of the most classic ones:</p>
 
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="n">it_is_raining</span>  <span class="p">{</span> <span class="c1">// then</span>
+<ul>
+  <li>Decision Trees</li>
+  <li>Random Forests</li>
+  <li>Gradient Boosting</li>
+</ul>
+
+<h3 id="preliminaries--what-is-a-decision-tree">Preliminaries — What <em>is</em> a Decision Tree?</h3>
+
+<p>Let’s start simple: a humble <code class="language-plaintext highlighter-rouge">if</code> / <code class="language-plaintext highlighter-rouge">else</code> statement.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="n">it_is_raining</span> <span class="p">{</span>
     <span class="n">items_to_carry</span> <span class="o">+=</span> <span class="s">"umbrella"</span><span class="p">;</span>
-<span class="p">}</span> <span class="k">else</span> <span class="p">{</span> <span class="c1">// it is not raining</span>
-    <span class="c1">// do not need to carry umbrella</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// no umbrella needed</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>As we can see the above if-else statement will intelligently help us to decide whether what we should do if it is raining outside.
-Lets now extend this if-else statement into the data context, consider the problem of trying to model the quality of a wine.</p>
+<p>That’s a one-node decision tree.
+Now, imagine scaling that intuition up — predicting <em>wine quality</em>:</p>
 
-<p>Consider the factors that would be helpful with predicting quality</p>
+<p>Features might include:</p>
+
 <ul>
-  <li>country of origin // france, portugal, italy are all known for their wines</li>
+  <li>country of origin</li>
   <li>year of production</li>
-  <li>average rainfall per country for the year</li>
-  <li>average temperature per country for the year</li>
-  <li>brand who has produced the wine</li>
-  <li>colour - white / red / red-blend</li>
-  <li>type of wine which has been produced // merlot, pintot</li>
+  <li>rainfall, temperature</li>
+  <li>brand</li>
+  <li>colour (white/red/red-blend)</li>
+  <li>type (merlot, pinot, etc.)</li>
   <li>price</li>
-  <li>Quality &lt;- This will be what we are trying to predict</li>
+  <li><strong>quality</strong> ← target variable</li>
 </ul>
 
-<p>All of these would be very useful and lets imagine the following if condition</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="n">country</span> <span class="o">==</span> <span class="n">greece</span> <span class="o">&amp;</span> <span class="n">colour</span> <span class="o">==</span> <span class="n">green</span> <span class="p">{</span>
-    <span class="c1">// Greece has amazing white and green wines</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="n">country</span> <span class="o">==</span> <span class="s">"greece"</span> <span class="o">&amp;&amp;</span> <span class="n">colour</span> <span class="o">==</span> <span class="s">"green"</span> <span class="p">{</span>
     <span class="n">predicted_quality</span> <span class="o">=</span> <span class="mf">1000_f32</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>The above simply is the backbone for how decision trees work to predict results. Imagine hundreds of branches which could cover different conditions for all countries and would split the data into different if-then statements intelligently - this is the decision tree.</p>
+<p>That’s the backbone idea: a hierarchy of <code class="language-plaintext highlighter-rouge">if-else</code> splits, each narrowing down the prediction.</p>
 
-<p>Algorithmically the decision tree performs the following</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="k">mut</span> <span class="n">best_split</span> <span class="o">=</span> <span class="nb">None</span>
-<span class="k">let</span> <span class="k">mut</span> <span class="n">explanatory_power</span> <span class="o">=</span>  <span class="mi">0</span><span class="p">;</span>
+<p><em>Algorithmically</em></p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="k">mut</span> <span class="n">best_split</span> <span class="o">=</span> <span class="nb">None</span><span class="p">;</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">explanatory_power</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+
 <span class="k">for</span> <span class="n">_</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="n">desired_number_of_nodes</span> <span class="p">{</span>
-    <span class="k">for</span> <span class="n">each</span> <span class="n">dimension</span> <span class="n">find</span> <span class="n">best</span> <span class="n">split</span> <span class="p">{</span>
-       <span class="k">if</span> <span class="nf">explanatory_power</span><span class="p">(</span><span class="n">this_split</span><span class="p">)</span> <span class="o">==</span> <span class="n">best</span> <span class="p">{</span>
-          <span class="n">best_split</span> <span class="o">=</span> <span class="n">this</span><span class="p">;</span>
-          <span class="n">explanatory_power</span> <span class="o">=</span> <span class="nf">explanatory_power</span><span class="p">(</span><span class="n">this_split</span><span class="p">);</span>
-       <span class="p">}</span>
+    <span class="k">for</span> <span class="n">each_dimension</span> <span class="k">in</span> <span class="n">data</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="nf">explanatory_power</span><span class="p">(</span><span class="n">this_split</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">explanatory_power</span> <span class="p">{</span>
+            <span class="n">best_split</span> <span class="o">=</span> <span class="n">this_split</span><span class="p">;</span>
+            <span class="n">explanatory_power</span> <span class="o">=</span> <span class="nf">explanatory_power</span><span class="p">(</span><span class="n">this_split</span><span class="p">);</span>
+        <span class="p">}</span>
     <span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>All the above does is formalize the if/else condition, and the predicted <code class="language-plaintext highlighter-rouge">Quality</code> for each node is simply the average quality of the items within the node. Remember to visualize as we are splitting data, the number of items in each node increasingly decreases, so we aren’t reclassifying the entire data at each step, only the members which are assigned to the current node.</p>
-
-<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Ie Node[0] // contains all data
-<span class="p">-</span> split and now we no longer within training consider Node[0] as it is not a leaf node
-Node[1], // contains ~ 1/2 data
-Node[2], // contains ~ 1/2 data
-<span class="p">-</span> split Node[2]
-Node[1], // contains ~ 1/2 data
-Node[3], // contains ~ 1/4 data (was previously node 2)
-Node[4], // contains ~ 1/4 data (was previously node 2) 
-</code></pre></div></div>
+<p>Each node only handles its subset of data — not the entire dataset — as we recursively partition.</p>
 
 <h3 id="decision-tree-extensions">Decision Tree Extensions</h3>
 
-<p>There are two main ways that we can extend the humble decision tree</p>
+<h4 id="random-forest">Random Forest</h4>
 
-<h4 id="random-forests">Random Forests</h4>
+<p>A <strong>Random Forest</strong> is just a collection of decision trees — each trained on a subsample of data or features.</p>
 
-<p>A random forest is essentially a collection of decision trees. Due to the fact that we deterministically use the best split for a decision tree, we do need to subsample either/or both - the data which are consdiered, or the number of dimensions which are considered at each step.</p>
-
-<p>After training we now have a large number of Decision Trees - apply named a Forest, and in order to perform a prediction</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="n">unseen_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">;</span>
-<span class="k">let</span> <span class="n">prediction</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="k">for</span> <span class="n">this_tree</span> <span class="k">in</span> <span class="n">forest</span> <span class="p">{</span>
-   <span class="n">prediction</span> <span class="o">+=</span> <span class="n">this_tree</span><span class="nf">.predict</span><span class="p">(</span><span class="n">unseen_data</span><span class="p">);</span>
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="k">mut</span> <span class="n">prediction</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+<span class="k">for</span> <span class="n">tree</span> <span class="k">in</span> <span class="n">forest</span> <span class="p">{</span>
+   <span class="n">prediction</span> <span class="o">+=</span> <span class="n">tree</span><span class="nf">.predict</span><span class="p">(</span><span class="n">unseen_data</span><span class="p">);</span>
 <span class="p">}</span>
-<span class="k">let</span> <span class="n">end_prediction</span> <span class="o">=</span>  <span class="n">prediction</span> <span class="o">/</span> <span class="n">number_of_trees</span>
-<span class="n">end_prediction</span>
+<span class="n">prediction</span> <span class="o">/=</span> <span class="n">forest</span><span class="nf">.len</span><span class="p">()</span> <span class="k">as</span> <span class="nb">f32</span><span class="p">;</span>
 </code></pre></div></div>
 
-<p>Random forest helps to incredibly debias the overfitting common in decision trees and other tree based methods.</p>
+<p>This ensemble effect dramatically reduces variance and overfitting.</p>
 
 <h4 id="gradient-boosting">Gradient Boosting</h4>
 
-<p>Gradient boosting is the other main way in order to extend decision trees. Instead of creating multiple trees and then averaging the output we recursively fit the error from the previous decision tree.</p>
+<p>Instead of averaging, <strong>Gradient Boosting</strong> fits each new tree to the <em>residual errors</em> of the previous one.
+It’s like an iterative “error correction” process:</p>
 
-<p>Think of it like this, we fit the first decision tree, and our prediction for the node isn’t perfect, so then we look at all of our predictions and then the error. For this remaining error we then fit a new decision tree.</p>
+<p>$prediction = y_0 + (\hat{y_0} - y_1) + (\hat{y_1} - y_2) + … + (\hat{y_{n-1}} - y_n)$</p>
 
-<p>For the end prediction we add sum all of the decision trees output as each decision tree was fitting <code class="language-plaintext highlighter-rouge">y-yhat</code> which when we sum we unfold all of them and get</p>
-<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code>prediction = y0 + ('y0 - y1) + (y1' - y2) + .. + ('yn-1 - yi);
-// each y0-y1 is correcting the error of the previous iteration
-prediction = y0 + error_correction[1].. + error_correction[n];
-</code></pre></div></div>
+<p>Each new model learns to predict what its predecessors <em>missed</em>.</p>
 
-<p>The predicted output isn’t exactly equal, this is how the error correction term is obtained</p>
+<h3 id="elphabas-look-at-the-great-wizard-of-oz--tree-extensions--implementations">Elphaba’s Look at the Great Wizard of Oz — Tree Extensions &amp; Implementations</h3>
 
-<h3 id="elphabas-look-at-the-great-wizard-of-oz---tree-extensions-and-their-implementaitons">Elphabas Look at the Great Wizard of Oz - Tree Extensions and their Implementaitons</h3>
+<p>Everyone wants to peek behind the curtain at the “complex” methods —
+and then realize they’re surprisingly elegant.</p>
 
-<p>Everyone wishes to review the most complex methods implementations - so lets review these first.
-<em>Gradient boosting</em> - lets review the complexity! - Wait … this looks incredibly simple…</p>
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">use</span> <span class="k">crate</span><span class="p">::</span><span class="nn">learning</span><span class="p">::</span><span class="nn">decision_tree</span><span class="p">::{</span>
-    <span class="n">DecisionTree</span><span class="p">,</span>
-    <span class="n">DecisionTreeModel</span>
-<span class="p">};</span> 
+<h4 id="gradient-boosting-rust">Gradient Boosting (Rust)</h4>
+
+<details>
+<summary>Click to expand code</summary>
+
+
+<figure class="highlight"><pre><code class="language-rust" data-lang="rust"><span class="k">use</span> <span class="k">crate</span><span class="p">::</span><span class="nn">learning</span><span class="p">::</span><span class="nn">decision_tree</span><span class="p">::{</span><span class="n">DecisionTree</span><span class="p">,</span> <span class="n">DecisionTreeModel</span><span class="p">};</span>
+
 <span class="k">pub</span> <span class="k">struct</span> <span class="n">GradientBoost</span> <span class="p">{</span>
-    <span class="n">trees</span><span class="p">:</span><span class="nb">usize</span><span class="p">,</span>
+    <span class="n">trees</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
     <span class="n">forest</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">DecisionTreeModel</span><span class="o">&gt;</span><span class="p">,</span>
 <span class="p">}</span>
+
 <span class="k">impl</span> <span class="n">GradientBoost</span> <span class="p">{</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">(</span><span class="n">data</span><span class="p">:</span><span class="o">&amp;</span><span class="k">mut</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="n">trees</span><span class="p">:</span><span class="nb">usize</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span><span class="nb">usize</span><span class="p">,</span> <span class="n">obs_sample</span><span class="p">:</span><span class="nb">f32</span><span class="p">,</span> <span class="n">dim_sample</span><span class="p">:</span><span class="nb">f32</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="k">Self</span> <span class="p">{</span>
-        <span class="k">if</span> <span class="n">data</span><span class="nf">.is_empty</span><span class="p">()</span> <span class="p">||</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="nf">.is_empty</span><span class="p">()</span> <span class="p">{</span> <span class="nd">panic!</span><span class="p">(</span><span class="s">"data is empty"</span><span class="p">);</span> <span class="p">}</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="n">trees</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+        <span class="n">nodes</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+        <span class="n">obs_sample</span><span class="p">:</span> <span class="nb">f32</span><span class="p">,</span>
+        <span class="n">dim_sample</span><span class="p">:</span> <span class="nb">f32</span>
+    <span class="p">)</span> <span class="k">-&gt;</span> <span class="k">Self</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">data</span><span class="nf">.is_empty</span><span class="p">()</span> <span class="p">||</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="nf">.is_empty</span><span class="p">()</span> <span class="p">{</span>
+            <span class="nd">panic!</span><span class="p">(</span><span class="s">"data is empty"</span><span class="p">);</span>
+        <span class="p">}</span>
         <span class="k">let</span> <span class="n">n_obs</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="nf">.len</span><span class="p">();</span>
         <span class="k">let</span> <span class="n">dims</span> <span class="o">=</span> <span class="n">data</span><span class="nf">.len</span><span class="p">();</span>
-        <span class="k">let</span> <span class="n">target_idx</span> <span class="o">=</span> <span class="n">data</span><span class="nf">.len</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+        <span class="k">let</span> <span class="n">target_idx</span> <span class="o">=</span> <span class="n">data</span><span class="nf">.len</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
         <span class="k">let</span> <span class="k">mut</span> <span class="n">sample</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="mf">0_f32</span><span class="p">;</span> <span class="n">dims</span><span class="p">];</span>
         <span class="k">let</span> <span class="k">mut</span> <span class="n">forest</span> <span class="o">=</span> <span class="nn">Vec</span><span class="p">::</span><span class="nf">with_capacity</span><span class="p">(</span><span class="n">trees</span><span class="p">);</span>
+
         <span class="k">for</span> <span class="n">_</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="n">trees</span> <span class="p">{</span>
             <span class="k">let</span> <span class="n">tree</span> <span class="o">=</span> <span class="nn">DecisionTree</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">obs_sample</span><span class="p">,</span> <span class="n">dim_sample</span><span class="p">)</span><span class="nf">.train</span><span class="p">(</span><span class="n">nodes</span><span class="p">);</span>
             <span class="k">for</span> <span class="n">idx</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="n">n_obs</span> <span class="p">{</span>
@@ -196,127 +192,107 @@ prediction = y0 + error_correction[1].. + error_correction[n];
             <span class="p">}</span>
             <span class="n">forest</span><span class="nf">.push</span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
         <span class="p">}</span>
-        <span class="k">Self</span><span class="p">{</span>
-            <span class="n">trees</span><span class="p">,</span>
-            <span class="n">forest</span><span class="p">,</span>
-        <span class="p">}</span>
+        <span class="k">Self</span> <span class="p">{</span> <span class="n">trees</span><span class="p">,</span> <span class="n">forest</span> <span class="p">}</span>
     <span class="p">}</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">predict</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span><span class="o">&amp;</span><span class="p">[</span><span class="nb">f32</span><span class="p">])</span> <span class="k">-&gt;</span> <span class="nb">f32</span> <span class="p">{</span>
-        <span class="k">let</span> <span class="k">mut</span> <span class="n">prediction</span> <span class="o">=</span> <span class="mf">0_f32</span><span class="p">;</span>
-        <span class="k">for</span> <span class="n">tree</span> <span class="k">in</span> <span class="o">&amp;</span><span class="k">self</span><span class="py">.forest</span> <span class="p">{</span>
-            <span class="n">prediction</span> <span class="o">+=</span> <span class="n">tree</span><span class="nf">.predict</span><span class="p">(</span><span class="n">data</span><span class="p">);</span> 
-        <span class="p">}</span>
-        <span class="n">prediction</span>
+
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">predict</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="o">&amp;</span><span class="p">[</span><span class="nb">f32</span><span class="p">])</span> <span class="k">-&gt;</span> <span class="nb">f32</span> <span class="p">{</span>
+        <span class="k">self</span><span class="py">.forest</span><span class="nf">.iter</span><span class="p">()</span><span class="nf">.map</span><span class="p">(|</span><span class="n">t</span><span class="p">|</span> <span class="n">t</span><span class="nf">.predict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="nf">.sum</span><span class="p">()</span>
     <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+</details>
+
+<h4 id="random-forest-rust">Random Forest (Rust)</h4>
+
+<details>
+<summary>Click to expand code</summary>
+
+<figure class="highlight"><pre><code class="language-rust" data-lang="rust"><span class="k">use</span> <span class="k">crate</span><span class="p">::</span><span class="nn">learning</span><span class="p">::</span><span class="nn">decision_tree</span><span class="p">::{</span><span class="n">DecisionTree</span><span class="p">,</span> <span class="n">DecisionTreeModel</span><span class="p">};</span>
+
+<span class="k">pub</span> <span class="k">struct</span> <span class="n">RandomForest</span> <span class="p">{</span>
+    <span class="n">trees</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+    <span class="n">forest</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">DecisionTreeModel</span><span class="o">&gt;</span><span class="p">,</span>
 <span class="p">}</span>
-</code></pre></div></div>
 
-<p><em>Random forest</em> - this one must be incredibly complex! - Wait… it’s exactly as trivial as the Gradient Boost implementation!</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>use crate::learning::decision_tree::{
-    DecisionTree,
-    DecisionTreeModel
-}; 
-pub struct RandomForest {
-    trees: usize,
-    forest: Vec&lt;DecisionTreeModel&gt;,
-}
-impl RandomForest {
-    pub fn new(data:&amp;Vec&lt;Vec&lt;f32&gt;&gt;, trees:usize, nodes:usize, obs_sample:f32, dim_sample:f32) -&gt; Self {
-        let forest:Vec&lt;DecisionTreeModel&gt; = (0..trees).into_iter().map(|_| {
-            let mut tree = DecisionTree::new(data, obs_sample, dim_sample);
-            tree.train(nodes)
-        }).collect();
-        Self { trees, forest }
-    }
-    pub fn predict(&amp;self, data:&amp;[f32]) -&gt; f32 {
-        let mut cumulative = 0_f32;
-        for tree in &amp;self.forest {
-            cumulative += tree.predict(data);
-        }
-        cumulative / self.trees as f32
-    }
-}
-</code></pre></div></div>
+<span class="k">impl</span> <span class="n">RandomForest</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="o">&amp;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+        <span class="n">trees</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+        <span class="n">nodes</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+        <span class="n">obs_sample</span><span class="p">:</span> <span class="nb">f32</span><span class="p">,</span>
+        <span class="n">dim_sample</span><span class="p">:</span> <span class="nb">f32</span>
+    <span class="p">)</span> <span class="k">-&gt;</span> <span class="k">Self</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="n">forest</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="o">..</span><span class="n">trees</span><span class="p">)</span>
+            <span class="nf">.map</span><span class="p">(|</span><span class="n">_</span><span class="p">|</span> <span class="p">{</span>
+                <span class="k">let</span> <span class="k">mut</span> <span class="n">tree</span> <span class="o">=</span> <span class="nn">DecisionTree</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">obs_sample</span><span class="p">,</span> <span class="n">dim_sample</span><span class="p">);</span>
+                <span class="n">tree</span><span class="nf">.train</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+            <span class="p">})</span>
+            <span class="nf">.collect</span><span class="p">();</span>
+        <span class="k">Self</span> <span class="p">{</span> <span class="n">trees</span><span class="p">,</span> <span class="n">forest</span> <span class="p">}</span>
+    <span class="p">}</span>
 
-<p>Incredibly confusing, that’s more lackluster than the reveal of Oz! They’re just wrappers for the decision tree implementation. <em>Remember they *are* model extensions of the decision tree itself</em>.
-Should we take a look at the Data Tree implementation?</p>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">predict</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="o">&amp;</span><span class="p">[</span><span class="nb">f32</span><span class="p">])</span> <span class="k">-&gt;</span> <span class="nb">f32</span> <span class="p">{</span>
+        <span class="k">self</span><span class="py">.forest</span><span class="nf">.iter</span><span class="p">()</span><span class="nf">.map</span><span class="p">(|</span><span class="n">t</span><span class="p">|</span> <span class="n">t</span><span class="nf">.predict</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="py">.sum</span><span class="p">::</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">()</span> <span class="o">/</span> <span class="k">self</span><span class="py">.trees</span> <span class="k">as</span> <span class="nb">f32</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
 
-<h3 id="decision-tree-implementation">Decision Tree Implementation</h3>
+</details>
 
-<p>Decision Trees actually have a fascinating implementation and their detail connects deeply to the usability of Random Forests and Gradient Boost.</p>
+<p>See? Behind the magic — they’re just <em>wrappers</em> around the core decision tree.</p>
 
-<h3 id="computational-complexity">Computational Complexity</h3>
+<h3 id="decision-tree-implementation--complexity">Decision Tree Implementation &amp; Complexity</h3>
 
-<p>For each decision tree we must look at every potential split. Lets consider the idea - for each feature create a list of the input rows, but sorted by the dimension values themself.</p>
+<p>For each tree, we scan all possible splits.
+Each dimension’s data is pre-sorted for efficiency.</p>
 
-<p>Total cost for creating the sorted list for every dimension <code class="language-plaintext highlighter-rouge">d</code>.</p>
-<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Sort's cost is O( n log n);
-O( d <span class="err">*</span> n log n )
-</code></pre></div></div>
-<p>For this implementation I will be looking at the Sum of Squared Errors (SSE). For each dimension in order to find the best split we partition a current node’s values into two nodes. As the statement is if-else, the split node will partition the data into two regions</p>
+<p><strong>Initial sort cost:</strong>
+$O(d \cdot n \log n)$</p>
 
-<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//For each member of the node
+<p><strong>Split evaluation per node:</strong></p>
 
-left_node := dimension_value &lt;= partition_value;
-right_node := dimension_value &gt; partition_value;
-</code></pre></div></div>
+<p>$ BaseNodeSSE = SumSquares - \frac{\text{sum_linear}^2}{\text{cardinality}} $
+$ SplitNodeSSE = SSE(left) + SSE(right)$</p>
 
-<p>We can use the following relation for variance</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>BaseNode := unsplit_node
-BaseNode ::
-  sum_squares // sum of y[i] * y[i] for members of this node
-  sum_linear // sum of y[i] for members of the node
+<p>Since we can compute these incrementally as we scan, the cost per split is linear.</p>
 
-BaseNode SSE := sum_squares - sum_linear * sum_linear / cardinality; // cardinality is just number of members;
+<p><strong>Overall cost:</strong></p>
 
+<p>$O(d \cdot n \log n + s \cdot n \cdot d)$<br />
+$\approx O(d \cdot n \log n)$</p>
 
-// This will be the new variance if we were to split at this given point
-SplitNodeSSE = SSE(left_node) + SSE(right_node)
+<p>That’s the <em>coup de grâce</em>:
+the whole algorithm’s cost is roughly that of the initial sort!</p>
 
-// We calculate this on a running basis
-LeftNode SSE := sum_squares - sum_linear * sum_linear  / cardinality;
+<details>
+<summary>Click to expand code</summary>
 
-// And now we can derive the right nodes new SSE
-inferred_sum_squares = BaseNode.sum_squares - LeftNode.sum_squares;
-inferred_sum_linear = BaseNode.sum_linear - LeftNode.sum_linear;
-inferred_cardinality = BaseNode.cardinality - LeftNode.cardinality;
+<figure class="highlight"><pre><code class="language-rust" data-lang="rust"><span class="k">fn</span> <span class="nf">delta</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">running</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">Self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">f32</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="k">self</span><span class="py">.card</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">||</span> <span class="n">running</span><span class="py">.card</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">||</span> <span class="k">self</span><span class="py">.card</span>  <span class="o">==</span> <span class="n">running</span><span class="py">.card</span> <span class="p">{</span> <span class="k">return</span> <span class="mf">0_f32</span> <span class="p">};</span>
+    <span class="k">let</span> <span class="p">(</span><span class="n">card</span><span class="p">,</span> <span class="n">l_card</span><span class="p">,</span> <span class="n">r_card</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">self</span><span class="py">.card</span> <span class="k">as</span> <span class="nb">f32</span><span class="p">,</span>
+        <span class="n">running</span><span class="py">.card</span> <span class="k">as</span> <span class="nb">f32</span><span class="p">,</span>
+        <span class="p">(</span><span class="k">self</span><span class="py">.card</span> <span class="o">-</span> <span class="n">running</span><span class="py">.card</span><span class="p">)</span> <span class="k">as</span> <span class="nb">f32</span><span class="p">,</span>
+    <span class="p">);</span>
+    <span class="k">let</span> <span class="n">sse_curr</span> <span class="o">=</span> <span class="k">self</span><span class="py">.sum_squares</span> <span class="o">-</span> <span class="k">self</span><span class="py">.sum_linear</span> <span class="o">*</span> <span class="k">self</span><span class="py">.sum_linear</span> <span class="o">/</span> <span class="n">card</span><span class="p">;</span>
+    <span class="k">let</span> <span class="n">sse_left</span> <span class="o">=</span> <span class="n">running</span><span class="py">.sum_squares</span> <span class="o">-</span> <span class="n">running</span><span class="py">.sum_linear</span> <span class="o">*</span> <span class="n">running</span><span class="py">.sum_linear</span> <span class="o">/</span> <span class="n">l_card</span><span class="p">;</span>
+    <span class="k">let</span> <span class="n">sse_right</span> <span class="o">=</span> <span class="p">(</span><span class="k">self</span><span class="py">.sum_squares</span> <span class="o">-</span> <span class="n">running</span><span class="py">.sum_squares</span><span class="p">)</span>
+        <span class="o">-</span> <span class="p">(</span><span class="k">self</span><span class="py">.sum_linear</span> <span class="o">-</span> <span class="n">running</span><span class="py">.sum_linear</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="k">self</span><span class="py">.sum_linear</span> <span class="o">-</span> <span class="n">running</span><span class="py">.sum_linear</span><span class="p">)</span>
+            <span class="o">/</span> <span class="n">r_card</span><span class="p">;</span>
+    <span class="c1">// weighted variance</span>
+    <span class="p">(</span><span class="n">sse_curr</span> <span class="o">-</span> <span class="n">sse_left</span> <span class="o">-</span> <span class="n">sse_right</span><span class="p">)</span> <span class="o">/</span> <span class="n">card</span>
+<span class="p">}</span></code></pre></figure>
 
-RightNode SSE := inferred_sum_squares - inferred_sum_linear * inferred_sum_linear / inferred_cardinality; 
-
-</code></pre></div></div>
-
-<p>Amazing! this now means that for each potential split that our total cost for determining the optimal split is actually proporitional to the number of records!
-This is <em>la coup de grace</em> of the implementation. This is what enable the implementation to be performant and directly drives the reason for the sorted dimensions.</p>
-
-<p>This means that we can simply iterate over the sorted dimensions and check if our split is optimal, linearly!
-The only caveat is that when we find the new split, we simply need to sort the other dimensions. I find this incredibly beautiful and elegant, lets look at the cost.</p>
-
-<div class="language-md highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// cost for determining the optimal split for
-let n := number of observations in the data;
-let s := number of desired nodes // splits
-let d := number of dimensions considered
-
-// cost for all splitting of nodes
-// O( find_the_best_split + sorting_other_dimensions)
-
-O( s <span class="ge">* n *</span> d  + d <span class="err">*</span> logn)
-</code></pre></div></div>
-
-<p>Finally we can show that the total cost for training the entire decision tree occurs</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// O( initial_sort_dimension_cost + splitting_of_nodes )
-O( d * nlog(n) + s * n * d)
-
-// s should be &lt;&lt; log(n)
-
-// End Cost -- Assomptitically equal to the initial cost of sorting the dimensions!!
-O( d * nlog(n));
-</code></pre></div></div>
+</details>
 
 <h3 id="defying-gravity">Defying Gravity</h3>
 
-<p>Decision Trees are amazingly powerful tools, the most important part is to ensure that a coherent and optimal decision tree base, then the implementations are more straightforward than Shiz Universities’ reaction to Elphaba’s green skin!</p>
+<p>Decision Trees are elegant, interpretable, and surprisingly performant.
+Master the base, and the extensions — Random Forests, Gradient Boost — come almost for free.</p>
+
+<p>The most powerful methods are often the simplest — once the base is solid.</p>
 
 <p>Thanks for reading!</p>
+
 
     </div>
   </div>
@@ -813,6 +789,20 @@ Thanks so much for taking a look at my blog!</p>
 </ul>
 
   </div>
+  <script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    },
+    svg: {
+      fontCache: 'global'
+    }
+  };
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+
 </body>
 </html>
 
