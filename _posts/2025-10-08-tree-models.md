@@ -5,6 +5,11 @@ date: 2025-10-08
 tags: [rust, machine-learning, backend, learning]
 ---
 
+**Implementations**
+- [Gradient Boost](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/gradient_boost.rs)
+- [Random Forest](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/random_forest.rs)
+- [Decision Tree](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/decision_tree.rs)
+
 ### A First Glance of the Statistical Performance
 
 ![Model Performance](./assets/tree_based_models_total_variance_explained.png)
