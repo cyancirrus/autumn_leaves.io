@@ -244,7 +244,7 @@ Since we can compute these incrementally as we scan, the cost per split is linea
 $O(d \cdot n \log n + s \cdot n \cdot d)$  
 $\approx O(d \cdot n \log n)$
 
-That’s the *coup de grâce*:
+That’s the *pièce de résistance*:
 the whole algorithm’s cost is roughly that of the initial sort!
 
 <details>
