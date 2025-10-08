@@ -9,8 +9,7 @@ tags: [rust, machine-learning, backend, learning]
 [Random Forest Implementation](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/random_forest.rs)  
 [Decision Tree Implementation](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/decision_tree.rs)  
 
-## Introduction
-
+### Introduction
 Machine learning is based upon a few based structures and methods - the perceptron, the decision tree, expectation maximization, clustering, dimension reduction.
 Today we'll be going through how to implement the following ML Algorithms:
  
@@ -18,9 +17,46 @@ Today we'll be going through how to implement the following ML Algorithms:
  - Random Forests
  - Decision Tree
 
-For these algorithms this article will be looking at their algorithmic definition, their complexity and also look at their statistical performance on a real dataset.
+### A First Glance of the Statistical Performance
 
-## Preliminaries - What is a Decision Tree?
+![Model Performance](./assets/tree_based_models_total_variance_explained.png)  
+
+The above chart has been drawn from the Boston Housing Data example which for different features predicts the median value of the house. The data is a bit on the smaller types of datasets and has a bit of variance which is important when analyzing the perforamnce of the methods.
+
+Each model was trained 36 times, as there's a bit of variance depending upon the subset that is selected (the data is incredibly small).
+The measure that i've utilized is total variance explained which is defined as
+
+```
+// Sum squares error of the model is defined as
+
+SSE(Model) := Sum (yi - yi^)^2
+SSE(Data) := Sum (yi - mean)^2
+
+// abbreviated as tve
+Total Variance Explained := 1 - SSE(model) / SSE(Data);
+```
+
+
+_*All TVE metrics are TVE on the unseen data from training.*_
+
+*Random Forest* - Average TVE 78%
+- Incredibly strong performance over all iterations this always has a strong perforamnce and is one of the methods which will help to debias the training data in order to help the metho perform well upon new unseen data. Average 
+
+*Gradient Boosting* - Average TVE 62%
+- Gradient boosting is normally an incredibly strong technique although the data size has incredibly defeated this method, there's not enough data variaty nor enough points in order to recursively fit the data appropriately. The model has incredibly overfit the data, parameters have not been grid searched but several have been tried. This model class is not appropriate for this dataset. Note the massive amount of variance between the lowest score for Gradient Boosted Model compared to it's Most Performant, the range is incredibly concerning and appears not stable.
+
+*Decision Tree* - Average TVE 67%
+- Base model and amazing transparency, some overfitting to the sample data which can be seen by it's relative performance to RandomForest. Can go through node by node in order to analyze which features were important. Overall a solid pick for the housing data averaging 65% Total Variance Explained for different samplings on the test dataset. Appropriate method for this problem
+
+_In order to run the above models yourself simply clone stellar_math and run_
+```bash
+// see if you can find better metadata parameters!
+cargo run --example trees
+open tve_chart.png
+```
+
+
+### Preliminaries - What is a Decision Tree?
 
 Lets consider the lowly if-else statement, this way we can build intuition for what is a decision tree. Consider the question on whether I should bring an umbrella with my outside...
 
@@ -83,48 +119,11 @@ Node[3], // contains ~ 1/4 data (was previously node 2)
 Node[4], // contains ~ 1/4 data (was previously node 2) 
 ```
 
-## Statistical Performance of the different Models
-
-The following chart has been drawn from the Boston Housing Data example which for different features predicts the median value of the house. The data is a bit on the smaller types of datasets and has a bit of variance which is important when analyzing the perforamnce of the methods.
-
-Each model was trained 36 times, as there's a bit of variance depending upon the subset that is selected (the data is incredibly small).
-The measure that i've utilized is total variance explained which is defined as
-
-```
-// Sum squares error of the model is defined as
-
-SSE(Model) := Sum (yi - yi^)^2
-SSE(Data) := Sum (yi - mean)^2
-
-// abbreviated as tve
-Total Variance Explained := 1 - SSE(model) / SSE(Data);
-```
-
-[Model Performance](assets/tree_based_models_total_variance_explained.png)  
-
-_*All TVE metrics are TVE on the unseen data from training.*_
-
-*Random Forest* - Average TVE 78%
-- Incredibly strong performance over all iterations this always has a strong perforamnce and is one of the methods which will help to debias the training data in order to help the metho perform well upon new unseen data. Average 
-
-*Gradient Boosting* - Average TVE 62%
-- Gradient boosting is normally an incredibly strong technique although the data size has incredibly defeated this method, there's not enough data variaty nor enough points in order to recursively fit the data appropriately. The model has incredibly overfit the data, parameters have not been grid searched but several have been tried. This model class is not appropriate for this dataset. Note the massive amount of variance between the lowest score for Gradient Boosted Model compared to it's Most Performant, the range is incredibly concerning and appears not stable.
-
-*Decision Tree* - Average TVE 67%
-- Base model and amazing transparency, some overfitting to the sample data which can be seen by it's relative performance to RandomForest. Can go through node by node in order to analyze which features were important. Overall a solid pick for the housing data averaging 65% Total Variance Explained for different samplings on the test dataset. Appropriate method for this problem
-
-_In order to run the above models yourself simply clone stellar_math and run_
-```bash
-// see if you can find better metadata parameters!
-cargo run --example trees
-open tve_chart.png
-```
-
-## Decision Tree Extensions
+### Decision Tree Extensions
 
 There are two main ways that we can extend the humble decision tree
 
-### Random Forests
+#### Random Forests
 
 A random forest is essentially a collection of decision trees. Due to the fact that we deterministically use the best split for a decision tree, we do need to subsample either/or both - the data which are consdiered, or the number of dimensions which are considered at each step.
 
@@ -142,7 +141,7 @@ end_prediction
 Random forest helps to incredibly debias the overfitting common in decision trees and other tree based methods.
 
 
-### Gradient Boosting
+#### Gradient Boosting
 
 Gradient boosting is the other main way in order to extend decision trees. Instead of creating multiple trees and then averaging the output we recursively fit the error from the previous decision tree.
 
@@ -158,7 +157,7 @@ prediction = y0 + error_correction[1].. + error_correction[n];
 The predicted output isn't exactly equal, this is how the error correction term is obtained
 
 
-## Elphabas Look at the Great Wizard of Oz - Tree Extensions and their Implementaitons
+### Elphabas Look at the Great Wizard of Oz - Tree Extensions and their Implementaitons
 
 Everyone wishes to review the most complex methods implementations - so lets review these first.
 *Gradient boosting* - lets review the complexity! - Wait ... this looks incredibly simple...
@@ -234,7 +233,7 @@ impl RandomForest {
 Incredibly confusing, that's more lackluster than the reveal of Oz! They're just wrappers for the decision tree implementation. _Remember they *are* model extensions of the decision tree itself_.
 Should we take a look at the Data Tree implementation?
 
-## Decision Tree Implementation
+### Decision Tree Implementation
 
 Decision Trees actually have a fascinating implementation and their detail connects deeply to the usability of Random Forests and Gradient Boost.
 
@@ -312,7 +311,7 @@ O( d * nlog(n));
 ```
 
 
-## Defying Gravity
+### Defying Gravity
 
 Decision Trees are amazingly powerful tools, the most important part is to ensure that a coherent and optimal decision tree base, then the implementations are more straightforward than Shiz Universities' reaction to Elphaba's green skin!
 
