@@ -226,3 +226,12 @@ a:hover, a:focus {
   border-radius: 3px;
 }
 
+
+/* Make all images scale down on smaller screens */
+img {
+    max-width: 100%;  /* never exceed the container width */
+    height: auto;     /* maintain aspect ratio */
+    display: block;   /* removes inline spacing issues */
+    margin: 1rem 0;   /* optional spacing */
+}
+
