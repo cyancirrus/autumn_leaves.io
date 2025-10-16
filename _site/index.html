@@ -14,6 +14,196 @@
 
 <div class="window">
     <div class="window-header">
+      On Expectation Maximization and Gaussian Mixture Models <small>(2025-10-08)</small>
+    </div>
+    <div class="window-content">
+      <p><strong>Implementations</strong></p>
+<ul>
+  <li><a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/kmeans.rs">KMeans</a></li>
+  <li><a href="https://github.com/cyancirrus/stellar-math/blob/main/src/learning/gaussian_mixture.rs">Gaussian Mixture</a></li>
+</ul>
+
+<h3 id="a-first-glance-at-statistical-performance">A First Glance at Statistical Performance</h3>
+
+<p><img src="./assets/kmeans_gmm_clusters.png" alt="Model Performance" /></p>
+
+<p>Today marks an exciting milestone! I want to cover one of the final implementations in my exploration of building all core Statistical Learning techniques from scratch.</p>
+
+<p><strong>Checklist of completed models:</strong></p>
+
+<ul>
+  <li><del>Artificial Neural Network</del></li>
+  <li><del>K Nearest Neighbors</del></li>
+  <li><del>Singular Value Decomposition &amp; Randomized SVD</del></li>
+  <li><del>Decision Tree, Random Forest &amp; GBM</del></li>
+</ul>
+
+<p><strong>New model type unlocked:</strong><br />
+<em>Expectation Maximization (EM)</em></p>
+
+<p>The graph above shows the Gaussian Mixture Model’s fit performance with KMeans initialization. In this article, I’ll go through implementing Expectation Maximization from scratch, and discuss some statistical and programmatic considerations.</p>
+
+<p>To reproduce the example:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/cyancirrus/stellar-math
+cargo run <span class="nt">--example</span> gmm
+open kmeans_gmm_clusters.png
+</code></pre></div></div>
+
+<h3 id="introduction">Introduction</h3>
+
+<p>We’ll first cover the primitive types used in this implementation: KMeans and Gaussian Mixtures. Both are closely related, though conceptually distinct.</p>
+
+<p><strong>Gaussian Distribution Recap:</strong>
+The Gaussian distribution, also known as the Normal distribution, is ubiquitous in statistics and named after mathematician Carl Friedrich Gauss. Formally:</p>
+
+<p>$\text{Gaussian} = \text{Normal} :: N(\mu, \sigma^2)$</p>
+
+<p><strong>KMeans vs GMM:</strong></p>
+
+<ul>
+  <li><strong>KMeans:</strong> Fits (k) Gaussian distributions with identical variance. Each data point receives a <em>hard</em> assignment.</li>
+  <li><strong>GMM:</strong> Fits (k) Gaussian distributions with potentially different variances. Each data point receives a <em>soft</em> assignment.</li>
+</ul>
+
+<p>Both methods are widely used to cluster data into distinct segments.</p>
+
+<h3 id="preliminaries--fitting-kmeans">Preliminaries — Fitting KMeans</h3>
+
+<p><strong>Known properties of KMeans:</strong></p>
+
+<ul>
+  <li>Equal variance</li>
+  <li>Deterministic assignments</li>
+  <li>Mixture parameters (centroids)</li>
+</ul>
+
+<p><strong>Algorithm steps:</strong></p>
+
+<ol>
+  <li>Randomly initialize cluster means and assume equal probability for each centroid.</li>
+  <li>Assign each point to the closest cluster based on Euclidean distance.</li>
+  <li>Update cluster means.</li>
+  <li>Iterate until convergence (when mean updates are small).</li>
+</ol>
+
+<p><strong>Gaussian distance simplification:</strong></p>
+
+<p>$ d^*(x; \mu) = (x - \mu)’(x - \mu)$</p>
+
+<p>This is equivalent to the squared Euclidean distance to the cluster centroid. The computational cost of KMeans:</p>
+
+<p>$O(n \cdot d \cdot k)$</p>
+
+<p>An optimization trick:</p>
+
+<p>$(x-\mu)’(x-\mu) = \langle x,x \rangle + \langle \mu,\mu \rangle - 2 \langle x,\mu \rangle$</p>
+
+<h3 id="expectation-maximization-for-gmms">Expectation Maximization for GMMs</h3>
+
+<p>GMMs introduce probabilistic assignments. The probability that a point belongs to cluster (k) is called the <em>mixing parameter</em>:</p>
+
+<p>$pi_k(x) = \frac{\gamma_k(x)}{\sum_j \gamma_j(x)}$</p>
+
+<p>The total probability of a data point:</p>
+
+<p>$P(x) = \sum_k \pi_k(x) f_k(x; \mu_k, \Sigma_k)$</p>
+
+<p>where (f_k) is the Gaussian PDF with potentially distinct covariance (\Sigma_k).</p>
+
+<p><strong>EM steps:</strong></p>
+
+<ol>
+  <li>
+    <p><strong>Expectation (E-step):</strong></p>
+
+    <ul>
+      <li>Use current parameters to compute cluster probabilities for each data point.</li>
+      <li>Normalize probabilities so they sum to 1.</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>Maximization (M-step):</strong></p>
+
+    <ul>
+      <li>Update (\mu_k) and (\Sigma_k) for each cluster based on weighted averages.</li>
+      <li>Rescale mixing parameters.</li>
+    </ul>
+  </li>
+</ol>
+
+<p>Iterate until convergence.</p>
+
+<h3 id="statistical-considerations">Statistical Considerations</h3>
+
+<p><strong>Probability scaling and floating-point stability:</strong>
+Naively computing probabilities can lead to underflows. Using log probabilities helps:</p>
+
+<p>$ \ln f(x; \mu, \Sigma) = -\frac{d}{2}\ln(2\pi) - \frac{1}{2}\ln\vert \Sigma \vert - \frac{1}{2} (x-\mu)’\Sigma^{-1}(x-\mu) $</p>
+
+<p>Rescale using the maximum log probability to prevent negative infinity:</p>
+
+<p>$l^*(x) = l(x) - \max_k l(x;\text{cluster}_k)$</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="k">mut</span> <span class="n">max_ln_prob</span> <span class="o">=</span> <span class="nn">f32</span><span class="p">::</span><span class="n">MIN</span><span class="p">;</span>
+<span class="k">for</span> <span class="n">k</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="k">self</span><span class="py">.centroids</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="k">self</span><span class="py">.cardinality</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="n">val</span> <span class="o">=</span> <span class="n">x_i</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">-</span> <span class="k">self</span><span class="py">.means</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">c</span><span class="p">];</span>
+        <span class="n">x_bar</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="p">;</span>
+        <span class="n">z_buf</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">probs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="k">self</span><span class="py">.mixtures</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="nf">.ln</span><span class="p">()</span> <span class="o">+</span> <span class="nf">ln_gaussian</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="n">x_bar</span><span class="p">,</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">z_buf</span><span class="p">,</span> <span class="n">dets</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">lus</span><span class="p">[</span><span class="n">k</span><span class="p">]);</span>
+    <span class="n">max_ln_prob</span>  <span class="o">=</span> <span class="n">max_ln_prob</span><span class="nf">.max</span><span class="p">(</span><span class="n">probs</span><span class="p">[</span><span class="n">k</span><span class="p">]);</span>
+<span class="p">}</span>
+<span class="k">let</span> <span class="k">mut</span> <span class="n">scaler</span> <span class="o">=</span> <span class="n">EPSILON</span><span class="p">;</span>
+<span class="k">for</span> <span class="n">k</span> <span class="k">in</span> <span class="mi">0</span><span class="o">..</span><span class="k">self</span><span class="py">.centroids</span> <span class="p">{</span>
+    <span class="n">probs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">probs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">-</span> <span class="n">max_ln_prob</span><span class="p">)</span><span class="nf">.exp</span><span class="p">()</span><span class="nf">.max</span><span class="p">(</span><span class="n">EPSILON</span><span class="p">);</span>
+    <span class="n">scaler</span> <span class="o">+=</span> <span class="n">probs</span><span class="p">[</span><span class="n">k</span><span class="p">];</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Covariance matrix computation:</strong>
+Use LU or Cholesky decomposition to solve $(x-\mu)’\Sigma^{-1}(x-\mu)$ efficiently.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">ln_gaussian</span><span class="p">(</span><span class="n">x_bar</span><span class="p">:</span><span class="o">&amp;</span><span class="k">mut</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">z_buf</span><span class="p">:</span><span class="o">&amp;</span><span class="k">mut</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">det</span><span class="p">:</span><span class="nb">f32</span><span class="p">,</span> <span class="n">lu</span><span class="p">:</span><span class="o">&amp;</span><span class="n">LuDecomposition</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">f32</span> <span class="p">{</span>
+    <span class="nd">debug_assert_eq!</span><span class="p">(</span><span class="n">x_bar</span><span class="nf">.to_vec</span><span class="p">(),</span> <span class="n">z_buf</span><span class="nf">.to_vec</span><span class="p">());</span>
+    <span class="k">let</span> <span class="n">card</span> <span class="o">=</span> <span class="n">x_bar</span><span class="nf">.len</span><span class="p">();</span>
+    <span class="n">lu</span><span class="nf">.solve_inplace_vec</span><span class="p">(</span><span class="n">z_buf</span><span class="p">);</span>
+    <span class="k">let</span> <span class="n">scaling</span> <span class="o">=</span> <span class="nf">dot_product</span><span class="p">(</span><span class="o">&amp;</span><span class="n">z_buf</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">x_bar</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2_f32</span><span class="p">;</span>
+    <span class="o">-</span><span class="p">(</span><span class="n">card</span> <span class="k">as</span> <span class="nb">f32</span> <span class="o">/</span> <span class="mf">2f32</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">2f32</span> <span class="o">*</span> <span class="nn">std</span><span class="p">::</span><span class="nn">f32</span><span class="p">::</span><span class="nn">consts</span><span class="p">::</span><span class="n">PI</span><span class="p">)</span><span class="nf">.ln</span><span class="p">()</span>
+    <span class="o">-</span> <span class="mf">0.5f32</span> <span class="o">*</span> <span class="n">det</span><span class="nf">.ln</span><span class="p">()</span>
+    <span class="o">-</span> <span class="n">scaling</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="implementation-overview">Implementation Overview</h3>
+
+<p>EM can be implemented efficiently by computing soft assignments and immediately updating centroids:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pub</span> <span class="k">fn</span> <span class="nf">expectation_maximization</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span><span class="o">&amp;</span><span class="p">[</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">f32</span><span class="o">&gt;</span><span class="p">])</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">sum_linear</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nd">vec!</span><span class="p">[</span><span class="mf">0_f32</span><span class="p">;</span> <span class="k">self</span><span class="py">.cardinality</span><span class="p">];</span> <span class="k">self</span><span class="py">.centroids</span><span class="p">];</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">sum_squares</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="nf">generate_zero_matrix</span><span class="p">(</span><span class="k">self</span><span class="py">.cardinality</span><span class="p">,</span> <span class="k">self</span><span class="py">.cardinality</span><span class="p">);</span> <span class="k">self</span><span class="py">.centroids</span><span class="p">];</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="recap-and-takeaways">Recap and Takeaways</h3>
+
+<ul>
+  <li>EM elegantly combines statistical reasoning with numerical programming tricks such as triangular solves, computational reuse, and log stabilization.</li>
+  <li>Initializing GMMs with KMeans centroids helps convergence.</li>
+  <li>With this, the basic Statistical Learning algorithms are fully implemented in Rust from scratch!</li>
+</ul>
+
+<p>I think my next steps will be to explore some Control Theory in C++ or perhaps extending Fourier transforms to arbitrary dimensions.</p>
+
+<p>Keep coding!</p>
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       Implementation of Tree based Models <small>(2025-10-08)</small>
     </div>
     <div class="window-content">
@@ -267,7 +457,7 @@ $ SplitNodeSSE = SSE(left) + SSE(right)$</p>
 <p>$O(d \cdot n \log n + s \cdot n \cdot d)$<br />
 $\approx O(d \cdot n \log n)$</p>
 
-<p>That’s the <em>coup de grâce</em>:
+<p>That’s the <em>pièce de résistance</em>:
 the whole algorithm’s cost is roughly that of the initial sort!</p>
 
 <details>

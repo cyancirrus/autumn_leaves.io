@@ -9,142 +9,114 @@ tags: [rust, machine-learning, backend, learning]
 - [KMeans](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/kmeans.rs)
 - [Gaussian Mixture](https://github.com/cyancirrus/stellar-math/blob/main/src/learning/gaussian_mixture.rs)
 
-### A First Glance of the Statistical Performance
+### A First Glance at Statistical Performance
 
 ![Model Performance](./assets/kmeans_gmm_clusters.png)
 
-Today, marks an exciting bookarmark! Today I wish to cover one of the last implementations for my explorations for implementing all Statistical Learning main Techniques from Scratch!
+Today marks an exciting milestone! I want to cover one of the final implementations in my exploration of building all core Statistical Learning techniques from scratch.
 
-Checklist
-- ~Artificial Neural Network~
-- ~K Nearest Neighbors~
-- ~Singular Value Decomposition & Randomized Svd~
-- ~Decision Tree & Random Forest & GBM~
+**Checklist of completed models:**
 
-* New model type unlocked!
-_ Expectation Maximization_
+- ~~Artificial Neural Network~~
+- ~~K Nearest Neighbors~~
+- ~~Singular Value Decomposition & Randomized SVD~~
+- ~~Decision Tree, Random Forest & GBM~~
 
-The graph above shows the Gaussian Mixture Model's fit performance with Kmeans initialization.
-In this article today I'm going to be going through how to implement Expectation Maximization (EM) from scratch, and a couple of Statistical and Programatic techniques.
+**New model type unlocked:**  
+_Expectation Maximization (EM)_
 
-To reproduce:
+The graph above shows the Gaussian Mixture Model's fit performance with KMeans initialization. In this article, I’ll go through implementing Expectation Maximization from scratch, and discuss some statistical and programmatic considerations.
+
+To reproduce the example:
+
 ```bash
 git clone https://github.com/cyancirrus/stellar-math
 cargo run --example gmm
 open kmeans_gmm_clusters.png
 ```
 
+
 ### Introduction
 
-Lets cover the primitive types for this implementaiton, the first being KMeans, and the Second Gaussian Mixtures. Both are extremely similar and heavily related and we partition the two into two separate camps.
+We’ll first cover the primitive types used in this implementation: KMeans and Gaussian Mixtures. Both are closely related, though conceptually distinct.
 
-First lets have a recall what is the Gaussian Distribution. The gaussian distribution is another name for the Normal Distribution, just references famous mathematician Frederick Gauss instead of calling it the "normal" distribution. Gaussian is the same normal everyone in statistics have grown up using and is used in the CLT, ie `Gaussian == Normal`.
+**Gaussian Distribution Recap:**
+The Gaussian distribution, also known as the Normal distribution, is ubiquitous in statistics and named after mathematician Carl Friedrich Gauss. Formally:
 
-KMeans := k different Gaussian (Normal Distribution) functions with identical variance are fit to the data. Each datum is given hard assignment.
-GMM := k different Gaussians with non-identical variances are fit to the data. Each datum is given soft assignment.
+$\text{Gaussian} = \text{Normal} :: N(\mu, \sigma^2)$
 
-Both KMeans and GMM are used when we wish to cluster data into different categories or segmentations of like others.
+**KMeans vs GMM:**
 
+* **KMeans:** Fits (k) Gaussian distributions with identical variance. Each data point receives a *hard* assignment.
+* **GMM:** Fits (k) Gaussian distributions with potentially different variances. Each data point receives a *soft* assignment.
 
-### Preliminaries - How should we look at fitting KMeans the simpler case?
+Both methods are widely used to cluster data into distinct segments.
 
-So lets start with our knowns
+### Preliminaries — Fitting KMeans
 
-- kmeans has mixture paramters
-- kmeans has equal variance
-- kmeans has deterministic
+**Known properties of KMeans:**
 
-The first step for kmeans will be to randomly initialize our cluster means' and presume equal probability for each centroid.
-Next lets take a look at the gaussian distribution.
+* Equal variance
+* Deterministic assignments
+* Mixture parameters (centroids)
 
-$gaussian(x; mu, sigma) = 1/(root pi)^2 sigma * exp( -1/2sigma^2(x-u)'(x-u))$
+**Algorithm steps:**
 
-As we know from statistics and mathematics that maximizing f(x) and maximizing g(f(x)) when  g is monotonic are exactly identical.
+1. Randomly initialize cluster means and assume equal probability for each centroid.
+2. Assign each point to the closest cluster based on Euclidean distance.
+3. Update cluster means.
+4. Iterate until convergence (when mean updates are small).
 
-Looking at the 
-$ln f(x; mu, sigma) = - 1/2 ln (root pi sigma^2) - 1/2 sigma^2(x-mu)'(x-mu)$
+**Gaussian distance simplification:**
 
-Remembering now that the variance parameter is defined to be equal and that the front term is now constant we can simply look at
+$ d^*(x; \mu) = (x - \mu)'(x - \mu)$
 
-$ d{star}(x;mu) = (x - mu)'(x - mu)$
+This is equivalent to the squared Euclidean distance to the cluster centroid. The computational cost of KMeans:
 
-Just a quick note here, since we reversed the sign underneath simplification we'll now be looking at taking the minimum of $d{star}$ for the best distribution. Convienantly this is exactly equal to the distance metric from a clusters centroid, so simply _we are finding the cluster which is closest to our data point_ this will be our cluster assignment.
+$O(n \cdot d \cdot k)$
 
-Now simply we will iterate over the data, assigning the points to the closest cluster, and then updating the cluster means until convergence (ie the update for the means is quite small).
+An optimization trick:
 
-Perfect! Elegant, simple.
+$(x-\mu)'(x-\mu) = \langle x,x \rangle + \langle \mu,\mu \rangle - 2 \langle x,\mu \rangle$
 
-The training cost for Kmeans
-$O(d \cdot n \cdot d)$
+### Expectation Maximization for GMMs
 
-One could use the following in order to help optimize the kmeans order but asymptotically runtime will still be proportional to $O(alpha \cdot N)$.
-$(x-mu)'(x-mu) = \<x,x\> + \<mu,mu\> -2\<x,u\>$
+GMMs introduce probabilistic assignments. The probability that a point belongs to cluster (k) is called the *mixing parameter*:
 
-### Expectation Maximization - How to obtain convergence in correlated state for GMM's
+$pi_k(x) = \frac{\gamma_k(x)}{\sum_j \gamma_j(x)}$
 
-The main issue for Gaussian Mixture models is that we have the following for the probability
+The total probability of a data point:
 
-Probability that the data applies to the kth clusters, $PI_k$ are referred to as the mixing parameters.
-$PI_k(x) = GAMMA_k(x) / Sum GAMMA_k(x)$
+$P(x) = \sum_k \pi_k(x) f_k(x; \mu_k, \Sigma_k)$
 
-Probability of x is the product of the probability it applies to kth cluster multiplied by the probability of said datapoint for the cluster.
-$Pr(x) = Sum PI_k(x) * f_k(x; MU, SIGMA)$
+where (f_k) is the Gaussian PDF with potentially distinct covariance (\Sigma_k).
 
-Remember the $f_k(x; MU, SIGMA)$ simply refers to gaussian distribution, however most importantly with different variances.
+**EM steps:**
 
-As we can see here, there are two main parts $PI_k(x)$ and $f_k(x; MU, SIGMA)$.
+1. **Expectation (E-step):**
 
-The expectation maximization procedure proceeds as follows.
+   * Use current parameters to compute cluster probabilities for each data point.
+   * Normalize probabilities so they sum to 1.
 
-* Expectation *
+2. **Maximization (M-step):**
 
-- for the current iteration utilize the previous mixing parameters
-- for each datapoint determine the cluster probability
-- normalize the probabilities for the datum to be equal to one
+   * Update (\mu_k) and (\Sigma_k) for each cluster based on weighted averages.
+   * Rescale mixing parameters.
 
-
-* Maximization *
-
-- update the paramters $MU$ and $SIGMA$ for each cluster dependent upon this new information
-- finally rescale the mixing parameters
-
-
-We simply loop over this structure until we obtain convergence.
+Iterate until convergence.
 
 ### Statistical Considerations
 
-#### Probability scaling and floating point numbers 
+**Probability scaling and floating-point stability:**
+Naively computing probabilities can lead to underflows. Using log probabilities helps:
 
-There exists a bit of a problem area in the naive implementation of GMM, the main point being that some probabilities will rapidly converge to 0. This will then present division by zero, and we'll return NaN's and it severly hurts convergence.
+$ \ln f(x; \mu, \Sigma) = -\frac{d}{2}\ln(2\pi) - \frac{1}{2}\ln\vert \Sigma \vert - \frac{1}{2} (x-\mu)'\Sigma^{-1}(x-\mu) $
 
-Instead of using the raw probabilities we can utilize a similar trick to kmeans by considering the log probabilities.
+Rescale using the maximum log probability to prevent negative infinity:
 
-However, as variances are different we must be a bit more careful
-$gaussian(x; mu, sigma) = 1/((2 \cdot PI)^d/2 |SIGMA|) * exp( -1/2(x-MU)' SIGMA^-1 (x-MU))$
+$l^*(x) = l(x) - \max_k l(x;\text{cluster}_k)$
 
-Logging the above distribution we obtain
-$l(x; mu, sigma) = d/2 * ln( 2 * PI) - 1/2 ln(|SIGMA|) -1/2(x-MU)' SIGMA^-1 (x-MU))$
-
-Setting asside temporarily the problem with the inversion of the Covariance Matrix $SIGMA$. Lets first concentrate on the relations we know.
-$PI_k(x) = GAMMA_k(x) / Sum GAMMA_k(x)$
-
-Lets consider what would happen if we were to multiply all probabilities by a constant
-$PI_k(x) = \cdot GAMMA_k(x) / Sum ALPHA \cdot GAMMA_k(x)$
-
-Pulling this to the front we can easily see we obtain the same result.
-Consider if we were to divide by the maximum of the probabilities then
-
-$l{star}(x; MU, SIGMA) = l(x; mu, sigma) - max l(x; cluster[k])$
-
-
-This then rescales the probabilities so that we can avoid the underflows of negative infinities which become NaN's. We simply rescale and by using
-$ exp( ln(a) - ln(b)) = exp(ln(a/b) = a/b$
-
-We are simply at a much better point for the implementation
-
-<details>
-<summary>Click to expand code</summary>
-{% highlight rust %}
+```rust
 let mut max_ln_prob = f32::MIN;
 for k in 0..self.centroids {
     for c in 0..self.cardinality {
@@ -160,114 +132,41 @@ for k in 0..self.centroids {
     probs[k] = (probs[k] - max_ln_prob).exp().max(EPSILON);
     scaler += probs[k];
 }
-{% endhighlight rust %}
-</details>
+```
 
-#### Solving for the Complexities of the Covariance Matrix
+**Covariance matrix computation:**
+Use LU or Cholesky decomposition to solve $(x-\mu)'\Sigma^{-1}(x-\mu)$ efficiently.
 
-Simply use LU or Cholesky decomposition. I've personally used LU decomposition because I had already written the methods but lets take a look at our statements (but note Cholesky would be quicker due to the symmetry of the Covariance Matrix and the same assumption in Cholesky).
-
-Lets consider the exponential part of the probability for the gaussian distribution, specifically the core part ie
-$(x-MU)' SIGMA^-1 (x-mu)$.
-
-lets first centralize x so we don't have so many floating symbols
-$x{bar}' SIGMA^-1 x{bar}$.
-
-Lets consider solving just a part of the above ie
-
-$SIGMA^-1 x{bar} = z$
-$ x{bar} = SIGMA z$
-
-Now we can just use LU backwards solve which showing quickly
-$LU = SIGMA$
-$x{bar} = LU z$
-$x{bar} = Lz{star}$
-
-This infers $z{star}$ which then we have the equation.
-$Uz = z{star}$ which infers $z$. Next we can finally plug into our original exponential centralization
-$x{bar}' SIGMA^-1 x{bar} = $x{bar}'z$
-
-And we're nearly finished. Lastly we need the determinant of Sigma.
-Recalling that LU are both traingle this then infers
-$|SIGMA| = |LU| = |L||U| = |U| = Product u_ii$
-
-Recalling that L diagonals are simply 1. So we simply sum over the diagonal!
-
-
-<details>
-<summary>Click to expand code</summary>
-{% highlight rust %}
+```rust
 fn ln_gaussian(x_bar:&mut Vec<f32>, z_buf:&mut Vec<f32>, det:f32, lu:&LuDecomposition) -> f32 {
-    // xbar := x - mean;
-    // we have x'Vx, where V := 1/ self.variance
-    // solve sub problem LUx = z*; for z* and then <x, z*>
     debug_assert_eq!(x_bar.to_vec(), z_buf.to_vec());
     let card = x_bar.len();
     lu.solve_inplace_vec(z_buf);
     let scaling = dot_product(&z_buf, &x_bar) / 2_f32;
-    {
-        -(card as f32 / 2f32) * (2f32 * std::f32::consts::PI).ln()
-        - 0.5f32 * det.ln()
-        - scaling
-    }
+    -(card as f32 / 2f32) * (2f32 * std::f32::consts::PI).ln()
+    - 0.5f32 * det.ln()
+    - scaling
 }
-{% endhighlight rust %}
-</details>
+```
 
-### Computational Considerations - A logical merger of EM steps
+### Implementation Overview
 
-Perfect in this section I just wish to note the structural form of EM when written into code.
+EM can be implemented efficiently by computing soft assignments and immediately updating centroids:
 
-<details>
-<summary>Click to expand code</summary>
-{% highlight rust %}
+```rust
 pub fn expectation_maximization(&mut self, data:&[Vec<f32>]) {
     let mut sum_linear = vec![vec![0_f32; self.cardinality]; self.centroids];
     let mut sum_squares = vec![generate_zero_matrix(self.cardinality, self.cardinality); self.centroids];
-    ... 
-
-    for x_i in data {
-        let mut max_ln_prob = f32::MIN;
-        for k in 0..self.centroids {
-            for c in 0..self.cardinality {
-                let val = x_i[c] - self.means[k][c];
-                x_bar[c] = val;
-                z_buf[c] = val;
-            }
-            probs[k] = self.mixtures[k].ln() + ln_gaussian(&mut x_bar, &mut z_buf, dets[k], &lus[k]);
-            max_ln_prob  = max_ln_prob.max(probs[k]);
-        }
-        let mut scaler = EPSILON;
-        for k in 0..self.centroids {
-            probs[k] = (probs[k] - max_ln_prob).exp().max(EPSILON);
-            scaler += probs[k];
-        }
-        for k in 0..self.centroids {
-            let pr = probs[k] / scaler;
-            nweighted[k] += pr;
-            for c in 0..self.cardinality {
-                sum_linear[k][c] += pr * x_i[c];
-            }
-            for i in 0..self.cardinality {
-                for j in 0..=i {
-                    sum_squares[k].data[i * self.cardinality + j] += pr * x_i[i] * x_i[j];
-                }
-            }
-        }
-        ...
-    }
+    ...
 }
-{% endhighlight rust %}
-</details>
+```
 
-Quickly notice instead of performing the entire expectation step where we are determining the soft-assignments, we merely find the soft assigments and then immediately update the new centroids. While this does require some messing about in combining the `sum_linear` and the `sum_squares` terms and scaling it's really quite straightforward. Just requires some clear naming conventions.
+### Recap and Takeaways
 
+* EM elegantly combines statistical reasoning with numerical programming tricks such as triangular solves, computational reuse, and log stabilization.
+* Initializing GMMs with KMeans centroids helps convergence.
+* With this, the basic Statistical Learning algorithms are fully implemented in Rust from scratch!
 
-### Recaps and Takeaways
+I think my next steps will be to explore some Control Theory in C++ or perhaps extending Fourier transforms to arbitrary dimensions.
 
-Thanks for reading! I'm extremely excited at having finally conquered the basic Statistical Learning Algorithms within rust. I've hoped you have learned something along the way with me as well.
-Expectation Maximization is a wonderful technique and combines disparate areas of other numerical programming such using triangular solving, computational reuse, and using logs for stabilization.
-Oh -- also utilize kmeans for the initial estimization for the centroids, it seems to get near monotonically better performance and can help with convergence.
-
-I think next I'll either tackle some Control within C++ or look at extending my Fourier transforms to handle arbitrary dimensions.
 Keep coding!
