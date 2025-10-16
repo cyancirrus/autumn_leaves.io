@@ -25,4 +25,3 @@ title: "Autumn Leaves"
 - [BLAS-style math library in Rust](https://github.com/cyancirrus/stellar-math)
 - [Neural network work-in-progress](https://github.com/cyancirrus/neural-net)
 - [Fun Wordle dynamic programming](https://github.com/cyancirrus/wordle)
-
