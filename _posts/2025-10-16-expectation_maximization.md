@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Implementation of Tree based Models"
+title: "On Expectation Maximization and Gaussian Mixture Models"
 date: 2025-10-08
 tags: [rust, machine-learning, backend, learning]
 ---
@@ -267,6 +267,7 @@ Quickly notice instead of performing the entire expectation step where we are de
 
 Thanks for reading! I'm extremely excited at having finally conquered the basic Statistical Learning Algorithms within rust. I've hoped you have learned something along the way with me as well.
 Expectation Maximization is a wonderful technique and combines disparate areas of other numerical programming such using triangular solving, computational reuse, and using logs for stabilization.
+Oh -- also utilize kmeans for the initial estimization for the centroids, it seems to get near monotonically better performance and can help with convergence.
 
 I think next I'll either tackle some Control within C++ or look at extending my Fourier transforms to handle arbitrary dimensions.
 Keep coding!
