@@ -5,7 +5,9 @@ title: "Autumn Leaves"
 
 # 🍂 Autumn Leaves
 
-## Leafnotes from a developer on a journey through code, math, and music
+### Autumn Allmon — Developer | Computational Scientist | Lifelong Learner
+
+*Leafnotes from a developer exploring code, math, and music.*  
 
 {% for post in site.posts %}
   <div class="window">
@@ -20,6 +22,7 @@ title: "Autumn Leaves"
 
 ## Current Studies
 - [Pre-optimized scheduler](https://github.com/cyancirrus/matix)
-- [Blas style math lib in rust](https://github.com/cyancirrus/stellar-math)
-- [Neural net work-in-progress](https://github.com/cyancirrus/neural-net)
-- [Fun wordle dynamic programming](https://github.com/cyancirrus/wordle)
+- [BLAS-style math library in Rust](https://github.com/cyancirrus/stellar-math)
+- [Neural network work-in-progress](https://github.com/cyancirrus/neural-net)
+- [Fun Wordle dynamic programming](https://github.com/cyancirrus/wordle)
+
