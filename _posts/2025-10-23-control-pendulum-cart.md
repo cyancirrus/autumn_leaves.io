@@ -33,47 +33,42 @@ First lets make a couple of simplifying assumptions
 
 ### Derivation of Inverted Pendulum
 
-Similarly to the $F = M \cdot a$ equation for motion for pendulums we have the following identity $Tau = r \times F$.
+Similarly to the $F = M \cdot a$ equation for motion for pendulums we have the following identities.
+$tau = r \times F = L \cdot mg \cdot sin(\theta)$
+Using $tau = I \cdot alpha$ where $alpha = \ddot{Theta}$ and $I = m L^2$ for a point mass.
 
-Differentiating wr.t. t we have 
-
-$Tau = \dot {I} \vec {w} + I \dot {\vec {w}} vec{n}$
-
-
-$w = \lVert\vec{r}\rVert * \lVert\vec{w}\rVert sin {Theta } \vec {n} \div \lVert\vec{r}\rVert ^ 2
-Carefully note the sine theta. Well be utilizing this cross product result.
-
-Where 'n' denotes the normal vector and 2-d we can treat as a scaler, after a bit of algebra we get that 
-
-After a bit of recductions we obtain the first main result we'll be using.
-$\ddot\Theta(t) = g \div l \cdot sin {Theta}$
-
+Implying
+$mL^2 * \ddot{\theta} = mgL * sin( \theta )$
+$\ddot{\theta} = g\div{L} * sin(\theta)$
 
 We simply can ask ourselves what function would produce this form. We'll express solutions as
-$a \cdot exp{w \cdot Theta{t}} k + b \cdot exp{-w \cdot Theta{t}}$
+$lambda = \pm\sqrt{g/L}$
+$a \cdot e^{\lambda t} + b \cdot exp{-\lambda t}$
 
 Note that the above function has no stable equilibria and deviations will increase. Unlike the normal pendulum there is no stable point except for perfectly balancing the pendulum.
 However, we utilize control to ensure that our system remains in valid territory and abides by our objective.
 
 ### Control Dynamics
 
-Lets consider Proporitional Derivative (PD) control.
+Let's consider Proportional Derivative (PD) control.
 
-We'll define two terms
-$k_p := \text{proportional gain}$
-$k_d := \text{derivative gain}$
+We'll define two terms:
+- $k_p$ := proportional gain
+- $k_d$ := derivative gain
 
-Essentially $k_p$ will scale based upon the absolute deviation and $k_d$ will help to prevent the system from overshooting.
-We'll now revise our dynamics to show these new forces in our system.
+Essentially $k_p$ scales based upon the absolute deviation and $k_d$ helps prevent the system from overshooting. We apply a control torque opposing the pendulum's motion:
 
+$\tau_{control} = k_p \cdot \theta + k_d \cdot \dot{\theta}$
 
-$\ddot\Theta{t} = g \div l \cdot sin {Theta{t}} - k_p \cdot \Theta{t} - k_d \cdot \dot\Theta{t}$
+Our dynamics become:
 
-Linearizing around theta bc $sin{Theta} \approx {Theta}$ for small theta, which is our objective, ie balancing the rake straight up in the air. 
+$mL^2 \cdot \ddot{\theta}(t) = mgL \cdot \sin(\theta(t)) - \tau_{control}$
 
-$\ddot\Theta{t} = Theta{t} \cdot (g \div l  - alpha\cdot\k_p ) - alpha\cdot\k_d \cdot \dot\Theta{t}$
+Dividing by $mL^2$ and linearizing with $\sin(\theta) \approx \theta$:
 
-There are finer ways one can scale these factors but this is enough depth for an entry point, just remember $alpha$ and $beta$ can be finitely determined. One simply needs to put back $Theta{t}$ in terms of torque so that the control which is also phrased in torque are on the same footing.
+$\ddot{\theta}(t) = \frac{g}{L} \cdot \theta(t) - \frac{k_p}{mL^2} \cdot \theta(t) - \frac{k_d}{mL^2} \cdot \dot{\theta}(t)$
+
+The exact scaling of $k_p$ and $k_d$ depends on the system's physical parameters, but the key insight is that we oppose both position and velocity to achieve stability.
 
 ### Coupled Control - How do we actually balance the rake?
 
@@ -86,39 +81,38 @@ $\dot{x} = \matrix{A}\vec{x} + \matrix{B}\vec{u}$
 
 We seek a representation for our data which will explain all of our dynamics, we have a new item we'll be tracking our hand _the cart_. So we'll be needing to include both $x$ and $\dot{x}$ for our new state space.
 
-$\dot{vec{x}}=[Theta, \dot\Theta, x, \dot\x]'$
+$\vec{x}=[\theta, \dot{\theta}, x, \dot{x}]^T$
 
 We then wish to find $\matrix{A}$ so that the derivatives are equal. Trivially we'll have
-$d\div{dt} Theta{t} = \dot Theta{t}$
-$d\div{dt} x{t} = \dot x{t}$
+$\frac{d}{dt} \theta(t) = \dot{\theta}(t)$
+$\frac{d}{dt} x(t) = \dot{x}( t )$
 
-So we are  essentially we're trying to find what both $\ddot\Theta$ and $\ddot\x$ equal.
+So we are  essentially we're trying to find what both $\ddot{\theta}$ and $\ddot{x}$ equal.
 
 so lets slow down and think of where the pendulum for x is ie
 
-$x_p = x_0 + l \cdot sin{theta}$
+$x_p = x_0 + l \cdot sin( \theta )$
 
-$\ddot\x_p = \ddot{x_0} + l\cdot\( \ddot{theta} *cos(theta) - (theta')^2 * sin(theta))$
+$\ddot{x_p} = \ddot{x_0} + l\cdot\( \ddot{\theta} *cos(\theta) - \dot{\theta}^2 * sin(\theta))$
 
-Then we'll linearize with our approximations for $theta$.
+Then we'll linearize with our approximations for $\theta$.
 
 $\ddot{x_p} \approx \ddot{x_0} + l \cdot \ddot\theta$
 
 And finally we'll include a term for how the pendulum when it falls it will push on the cart in the opposite direction that the pendulum falls.
-$\ddot{theta{t}} = g/l * sin{theta} - \ddot\x\div\l\cdot\cos{theta}$
+$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \ddot{x}\div{l} \cdot\cos( \theta )$
 
+Substituting the expression for $\ddot{x}$ into the pendulum equation and linearizing $cos(\theta) \approx 1$, we obtain the coupled system.
 
-We'll perform some algebra and arrive at the following for both $\ddot\x$ and $\ddot\theta$.
-
-$\ddot{theta} = (M + mg)\div{Ml} - F\div{ML}$
-$\ddot{x} = -{mg}\div{M}\cdot\Theta  + 1\div{M} \cdot F$
+$\ddot{\theta} = \frac{(M + m)g}{ML} - \frac{F}{ML}$
+$\ddot{x} = -\frac{mg}iv{M}\cdot\Theta  + \frac{1}{M} \cdot F$
 
 Finally we have solved and determined that 
 $\dot{x} = \matrix{A}\vec{x} + \matrix{B}\vec{u}$
 
 $u = F$
 
-$vec{B} = [0, 1\div{m}, 0, -1\div{Ml}]$
+$vec{B} = [0, -\frac{1}{Ml}, 0, \frac{1}{m}]$
 
 ### Back to Programming
 
@@ -134,7 +128,7 @@ void PendulumCart::control(float dt, float kp, float kd) {
 
 	theta += dt * theta_dot;
 
-	// friction
+	// friction to help with the visualization does not exist in ideal system
 
 	x_dot *= 0.99;
 
