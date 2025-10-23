@@ -112,8 +112,8 @@ $\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{l} \cdot\c
 
 Substituting the expression for $\ddot{x}$ into the pendulum equation and linearizing $cos(\theta) \approx 1$, we obtain the coupled system.
 
-$\ddot{\theta} = \frac{(M + m)g}{ML} - \frac{F}{ML}$
-$\ddot{x} = -\frac{mg}iv{M}\cdot\theta  + \frac{1}{M} \cdot F$
+$\ddot{\theta} = \frac{(M + m)g}{ML}\cdot\theta - \frac{F}{ML}$
+$\ddot{x} = -\frac{mg}{M}\cdot\theta  + \frac{1}{M} \cdot F$
 
 Finally we have solved and determined that 
 $\dot{x} = A\vec{x} + B\vec{u}$
@@ -147,14 +147,14 @@ void PendulumCart::control(float dt, float kp, float kd) {
 }
 ```
 
-Essentially that's the main control within the simulation! It's quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we'd have $O\({n^3}\)$ opperations which for something so straight forward I simply iterated via the procedure above. 
+Essentially that's the main control within the simulation! It's quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we'd have $O\({n^3}\)$ operations which for something so straight forward I simply iterated via the procedure above. 
 
 There definitely do exist models where control is automatically derived and not all dynamics will be so transparent such that we utilize these methods to find closed form solutions. This is a special case of several simplifying assumptions and the fact that these are ODE's with known dynamics. However, everything was a great primer to brush up on several control theory concepts and to work with different proportions of control values and see how they interact.
 
-Fun enough one can use many of the loss forms similar to statistics in order to perform a metaparameter search for optimization underneath your data.
+Fun enough one can use many of the loss forms similar to statistics in order to perform a hyperparameter search for optimization underneath your data.
  
 ### Summary
 
-This was a fun break from deep diving into implementations, although even this felt a bit light on the implementation for myself, although provided me a chance to brush up on my C++. Control presents a super interesting form and there are incredibly deep topics not presented here - observability, controlability, optimal control, stochastic control. It's a very interesting field and I hope you have enjoyed as much as I have this quick dive!
+This was a fun break from deep diving into implementations, although even this felt a bit light on the implementation for myself, although provided me a chance to brush up on my C++. Control presents a super interesting form and there are incredibly deep topics not presented here - observability, controllability, optimal control, stochastic control. It's a very interesting field and I hope you have enjoyed as much as I have this quick dive!
 
-Next week I hope to extend these results, and do something a bit more challanging, it would be nice to get up a fully async Kahlman Filter, or to extend on some of these ideas here. I"m not sure, I'm sure I'll find something fun!
+Next week I hope to extend these results, and do something a bit more challenging, it would be nice to get up a fully async Kahlman Filter, or to extend on some of these ideas here. I'm not sure, I'm sure I'll find something fun!
