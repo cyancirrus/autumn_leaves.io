@@ -2,7 +2,7 @@
 layout: post
 title: "On Expectation Maximization and Gaussian Mixture Models"
 date: 2025-10-08
-tags: [rust, machine-learning, backend, learning] ---
+tags: [rust, machine-learning, backend, learning]
 ---
 
 **Implementations**
