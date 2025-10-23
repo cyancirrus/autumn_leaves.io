@@ -82,13 +82,14 @@ Above we've derived a quick sketch on how we can express our system - but this w
 
 
 Perfect that's fine for idealized control but how do we do control with systems? Introduce the standard state space model for control theory
-$\dot{x} = A}\vec{x} + \matrix{B}\vec{u}$
+
+$\dot{x} = A\vec{x} + B\vec{u}$
 
 We seek a representation for our data which will explain all of our dynamics, we have a new item we'll be tracking our hand _the cart_. So we'll be needing to include both $x$ and $\dot{x}$ for our new state space.
 
 $\vec{x}=[\theta, \dot{\theta}, x, \dot{x}]^T$
 
-We then wish to find $\matrix{A}$ so that the derivatives are equal. Trivially we'll have
+We then wish to find $A$ so that the derivatives are equal. Trivially we'll have
 
 $\frac{d}{dt} \theta(t) = \dot{\theta}(t)$
 
@@ -98,29 +99,31 @@ So we are  essentially we're trying to find what both $\ddot{\theta}$ and $\ddot
 
 so lets slow down and think of where the pendulum for x is ie
 
-$x_p = x_0 + l \cdot sin( \theta )$
+$x_p = x_0 + L \cdot sin( \theta )$
 
-$\ddot{x_p} = \ddot{x_0} + l\cdot\( \ddot{\theta} *cos(\theta) - \dot{\theta}^2 * sin(\theta))$
+$\ddot{x_p} = \ddot{x_0} + L\cdot\[ \ddot{\theta} *cos(\theta) - \dot{\theta}^2 * sin(\theta)]$
 
 Then we'll linearize with our approximations for $\theta$.
 
-$\ddot{x_p} \approx \ddot{x_0} + l \cdot \ddot\theta$
+$\ddot{x_p} \approx \ddot{x_0} + L \cdot \ddot\theta$
 
 And finally we'll include a term for how the pendulum when it falls it will push on the cart in the opposite direction that the pendulum falls.
 
-$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{l} \cdot\cos( \theta )$
+$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{L} \cdot\cos( \theta )$
 
 Substituting the expression for $\ddot{x}$ into the pendulum equation and linearizing $cos(\theta) \approx 1$, we obtain the coupled system.
 
 $\ddot{\theta} = \frac{(M + m)g}{ML}\cdot\theta - \frac{F}{ML}$
+
 $\ddot{x} = -\frac{mg}{M}\cdot\theta  + \frac{1}{M} \cdot F$
 
 Finally we have solved and determined that 
+
 $\dot{x} = A\vec{x} + B\vec{u}$
 
 $u = F$
 
-$\vec{B} = [0, -\frac{1}{Ml}, 0, \frac{1}{m}]$
+$\vec{B} = [0, -\frac{1}{ML}, 0, \frac{1}{M}]^T$
 
 ### Back to Programming
 

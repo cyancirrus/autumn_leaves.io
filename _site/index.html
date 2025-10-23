@@ -99,14 +99,15 @@ However, we utilize control to ensure that our system remains in valid territory
 
 <p>Above we’ve derived a quick sketch on how we can express our system - but this won’t let us balance our rake – which is our favourite fall time activity! Our hand doesn’t move at the speed of light, and our hand will also drift through the space. How can we express the dynamics of our balance alongside the dynamics of our rake - which so eagerly wishes to fall?</p>
 
-<p>Perfect that’s fine for idealized control but how do we do control with systems? Introduce the standard state space model for control theory
-$\dot{x} = A}\vec{x} + \matrix{B}\vec{u}$</p>
+<p>Perfect that’s fine for idealized control but how do we do control with systems? Introduce the standard state space model for control theory</p>
+
+<p>$\dot{x} = A\vec{x} + B\vec{u}$</p>
 
 <p>We seek a representation for our data which will explain all of our dynamics, we have a new item we’ll be tracking our hand <em>the cart</em>. So we’ll be needing to include both $x$ and $\dot{x}$ for our new state space.</p>
 
 <p>$\vec{x}=[\theta, \dot{\theta}, x, \dot{x}]^T$</p>
 
-<p>We then wish to find $\matrix{A}$ so that the derivatives are equal. Trivially we’ll have</p>
+<p>We then wish to find $A$ so that the derivatives are equal. Trivially we’ll have</p>
 
 <p>$\frac{d}{dt} \theta(t) = \dot{\theta}(t)$</p>
 
@@ -116,29 +117,31 @@ $\dot{x} = A}\vec{x} + \matrix{B}\vec{u}$</p>
 
 <p>so lets slow down and think of where the pendulum for x is ie</p>
 
-<p>$x_p = x_0 + l \cdot sin( \theta )$</p>
+<p>$x_p = x_0 + L \cdot sin( \theta )$</p>
 
-<p>$\ddot{x_p} = \ddot{x_0} + l\cdot( \ddot{\theta} *cos(\theta) - \dot{\theta}^2 * sin(\theta))$</p>
+<p>$\ddot{x_p} = \ddot{x_0} + L\cdot[ \ddot{\theta} *cos(\theta) - \dot{\theta}^2 * sin(\theta)]$</p>
 
 <p>Then we’ll linearize with our approximations for $\theta$.</p>
 
-<p>$\ddot{x_p} \approx \ddot{x_0} + l \cdot \ddot\theta$</p>
+<p>$\ddot{x_p} \approx \ddot{x_0} + L \cdot \ddot\theta$</p>
 
 <p>And finally we’ll include a term for how the pendulum when it falls it will push on the cart in the opposite direction that the pendulum falls.</p>
 
-<p>$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{l} \cdot\cos( \theta )$</p>
+<p>$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{L} \cdot\cos( \theta )$</p>
 
 <p>Substituting the expression for $\ddot{x}$ into the pendulum equation and linearizing $cos(\theta) \approx 1$, we obtain the coupled system.</p>
 
-<p>$\ddot{\theta} = \frac{(M + m)g}{ML} - \frac{F}{ML}$
-$\ddot{x} = -\frac{mg}iv{M}\cdot\theta  + \frac{1}{M} \cdot F$</p>
+<p>$\ddot{\theta} = \frac{(M + m)g}{ML}\cdot\theta - \frac{F}{ML}$</p>
 
-<p>Finally we have solved and determined that 
-$\dot{x} = A\vec{x} + B\vec{u}$</p>
+<p>$\ddot{x} = -\frac{mg}{M}\cdot\theta  + \frac{1}{M} \cdot F$</p>
+
+<p>Finally we have solved and determined that</p>
+
+<p>$\dot{x} = A\vec{x} + B\vec{u}$</p>
 
 <p>$u = F$</p>
 
-<p>$\vec{B} = [0, -\frac{1}{Ml}, 0, \frac{1}{m}]$</p>
+<p>$\vec{B} = [0, -\frac{1}{ML}, 0, \frac{1}{M}]^T$</p>
 
 <h3 id="back-to-programming">Back to Programming</h3>
 
@@ -163,17 +166,17 @@ $\dot{x} = A\vec{x} + B\vec{u}$</p>
 <span class="p">}</span>
 </code></pre></div></div>
 
-<p>Essentially that’s the main control within the simulation! It’s quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we’d have $O({n^3})$ opperations which for something so straight forward I simply iterated via the procedure above.</p>
+<p>Essentially that’s the main control within the simulation! It’s quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we’d have $O({n^3})$ operations which for something so straight forward I simply iterated via the procedure above.</p>
 
 <p>There definitely do exist models where control is automatically derived and not all dynamics will be so transparent such that we utilize these methods to find closed form solutions. This is a special case of several simplifying assumptions and the fact that these are ODE’s with known dynamics. However, everything was a great primer to brush up on several control theory concepts and to work with different proportions of control values and see how they interact.</p>
 
-<p>Fun enough one can use many of the loss forms similar to statistics in order to perform a metaparameter search for optimization underneath your data.</p>
+<p>Fun enough one can use many of the loss forms similar to statistics in order to perform a hyperparameter search for optimization underneath your data.</p>
 
 <h3 id="summary">Summary</h3>
 
-<p>This was a fun break from deep diving into implementations, although even this felt a bit light on the implementation for myself, although provided me a chance to brush up on my C++. Control presents a super interesting form and there are incredibly deep topics not presented here - observability, controlability, optimal control, stochastic control. It’s a very interesting field and I hope you have enjoyed as much as I have this quick dive!</p>
+<p>This was a fun break from deep diving into implementations, although even this felt a bit light on the implementation for myself, although provided me a chance to brush up on my C++. Control presents a super interesting form and there are incredibly deep topics not presented here - observability, controllability, optimal control, stochastic control. It’s a very interesting field and I hope you have enjoyed as much as I have this quick dive!</p>
 
-<p>Next week I hope to extend these results, and do something a bit more challanging, it would be nice to get up a fully async Kahlman Filter, or to extend on some of these ideas here. I”m not sure, I’m sure I’ll find something fun!</p>
+<p>Next week I hope to extend these results, and do something a bit more challenging, it would be nice to get up a fully async Kahlman Filter, or to extend on some of these ideas here. I’m not sure, I’m sure I’ll find something fun!</p>
 
     </div>
   </div>
