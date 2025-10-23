@@ -16,7 +16,177 @@
 
 <div class="window">
     <div class="window-header">
-       <small>(2025-10-16)</small>
+       <small>(2025-10-23)</small>
+    </div>
+    <div class="window-content">
+      <p><strong>Implementations</strong></p>
+<ul>
+  <li><a href="https://github.com/cyancirrus/stablestar/blob/main/src/cart_pendulum.cpp">Cart Pendulum</a></li>
+  <li><a href="https://github.com/cyancirrus/stablestar/blob/main/src/pendulum.cpp">Inverted Pendulum</a></li>
+  <li><a href="https://github.com/cyancirrus/stablestar/blob/main/src/main.cpp">Visualization</a></li>
+</ul>
+
+<p>Control Theory in action
+<img src="./assets/control_simulation.gif" alt="Model Performance" /></p>
+
+<p>i was thinking b/c i have basic inverted pendulum so start with like</p>
+
+<p>F=ma</p>
+
+<p>for pendulums it’s like</p>
+
+<p>T= Ia  // torque</p>
+
+<p>and like then like, essentially in 2d it’s a cross product, b/c torque is twisty</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>T(a,b) =</td>
+      <td> </td>
+      <td>a</td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+      <td>b</td>
+      <td> </td>
+      <td>sin(theta),</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>then like we have the diffeq so it’s like</p>
+
+<p>theta’‘(t)= g/l theta(t) // inverted, gravity points downard</p>
+
+<p>then i was like going to talk a little bit about like</p>
+
+<p>so how do we control it we have like k[d] and k[p]</p>
+
+<p>k[p] proportional control – fix the error</p>
+
+<p>k[d] derivative control – don’t fix it to quickly or ur going to overswing, like a diffusion constant or something</p>
+
+<p>and then be like i guess we could do the method of characteristics so like</p>
+
+<p>af’’ + bf’  + cf // assume like form ~</p>
+
+<p>Aexp(-wt) + Bexp(wt)</p>
+
+<p>so if we really wanted to find the constraints that’d be fine but like okay that will kinda show that we need some sort of control going back into theta so like new standard eq for</p>
+
+<p>// time derives this is ODE</p>
+
+<p>theta’‘(t) = g/ltheta(t) - k[p] * theta - k[d] * theta’</p>
+
+<hr />
+
+<p>okay sweet so that’s like static control</p>
+
+<p>then be like essentially, perfect that’s fine for idealized control but how do we do control with systems?</p>
+
+<p>x’ = Ax + Bu</p>
+
+<p>consider state</p>
+
+<p>x=[theta, theta’, x, x’]’</p>
+
+<p>we then wish to find A</p>
+
+<p>obviously we have like for A</p>
+
+<p>A = [[0, 1,0,0], *, [0,0,0,1], *], trivially</p>
+
+<p>so then like essentially we’re trying to find what theta’’ equals</p>
+
+<p>so lets slow down and think of where the pendulum for x is ie</p>
+
+<p>x[p] = x0 + l * sin(theta)</p>
+
+<p>d^2/dt^2 x[p] = x’‘0 +l *[ theta’’ *cos(theta) - (theta’)^2 * sin(theta)]</p>
+
+<p>then i guess we linearize so we get</p>
+
+<p>d^2/dt^2 x[p] ~= x’‘0 +l * theta’’</p>
+
+<p>so similarly like  or no not yet we need to like do looking at my notes</p>
+
+<p>theta’’ = g/l * sin theta - x’‘/l cos theta</p>
+
+<p>// we found x’’ from above</p>
+
+<p>and what not so now ummmm i guess yeah so we still have Force = ma but now we have like</p>
+
+<p>Ia = ml * theta’’ // how big and twisty it goes</p>
+
+<p>F = mass_cart * x’’ + ml * theta’’</p>
+
+<p>which then we can solve for like</p>
+
+<p>x’’ = F-mg *theta / M</p>
+
+<p>theta’’ = ((M +m)g - F)/Ml</p>
+
+<p>separating these into our state vector</p>
+
+<p>theta’’ = f(theta) - f(force) // twisty if pole falls backwards it pushes forward</p>
+
+<p>= (M + mg)/Ml - F/ML</p>
+
+<p>and similarly for x’’</p>
+
+<p>x’’ = -mg/M theta + 1/M * F</p>
+
+<p>now looking at the control theory Eq</p>
+
+<p>x’ = Ax + Bu; we’ve solved F and have determined that u ==</p>
+
+<p>u = F and</p>
+
+<p>B = [0, 1/m, 0, -1/Ml]</p>
+
+<hr />
+
+<p>so now we like</p>
+
+<p>we like have our basic eqs and now we just need to get a propper update</p>
+
+<p>theta’‘(t) = g/l* theta(t) - k[p] * theta - k[d] * theta’ // opposite signs</p>
+
+<p>= (g/l - k[p]) * theta - k[d] * theta’</p>
+
+<p>so we know this and x’’ ~ f(theta), but theta’’ is not a f(x) so we find the force // adding in the control constraints (which while are both f0, f1 orders, sense they equal the double derive that’s where they hit)</p>
+
+<p>void PendulumCart::control(float dt, float kp, float kd) {</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>float force = kp * theta + kd * theta_dot;
+
+theta_dot += dt * ((mass_cart + mass_pendulum) * g * sin(theta) - force) /(mass_cart * length_pendulum);
+
+theta += dt * theta_dot;
+
+// friction
+
+x_dot *= 0.99;
+
+x_dot += dt * (force -mass_pendulum * g * theta ) / mass_cart;
+
+x += dt * x_dot;
+</code></pre></div></div>
+
+<p>}</p>
+
+<p>and then we just integrate, there’s other ways one could do this, but i was seeking to make the feedback as quick as possible, so instead of using matrices or matmul, i just represented in Ax + Bu form and like iterated</p>
+
+<p>some notes here about tuning state and what not, coupled Ode’s are really neat, i myself needed to refresh on what the eqs were for torque, but super fun experiments and after some hurdles visualization in C++ isn’t too terribly difficult!</p>
+
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
+       <small>(2025-10-23)</small>
     </div>
     <div class="window-content">
       <p><strong>Implementations</strong></p>
