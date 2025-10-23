@@ -34,16 +34,21 @@ First lets make a couple of simplifying assumptions
 ### Derivation of Inverted Pendulum
 
 Similarly to the $F = M \cdot a$ equation for motion for pendulums we have the following identities.
-$tau = r \times F = L \cdot mg \cdot sin(\theta)$
-Using $tau = I \cdot alpha$ where $alpha = \ddot{Theta}$ and $I = m L^2$ for a point mass.
+$\tau = r \times F = L \cdot mg \cdot sin(\theta)$
 
-Implying
+Using $\tau = I \cdot \alpha$ where $\alpha = \ddot{\theta}$ and $I = m L^2$ for a point mass.
+
+*Implying*
+
 $mL^2 * \ddot{\theta} = mgL * sin( \theta )$
-$\ddot{\theta} = g\div{L} * sin(\theta)$
+
+$\ddot{\theta} = \frac{g}{L} * sin(\theta)$
 
 We simply can ask ourselves what function would produce this form. We'll express solutions as
-$lambda = \pm\sqrt{g/L}$
-$a \cdot e^{\lambda t} + b \cdot exp{-\lambda t}$
+
+$\lambda = \pm\sqrt{g/L}$
+
+$a \cdot e^{\lambda t} + b \cdot e^{-\lambda t}$
 
 Note that the above function has no stable equilibria and deviations will increase. Unlike the normal pendulum there is no stable point except for perfectly balancing the pendulum.
 However, we utilize control to ensure that our system remains in valid territory and abides by our objective.
@@ -77,14 +82,16 @@ Above we've derived a quick sketch on how we can express our system - but this w
 
 
 Perfect that's fine for idealized control but how do we do control with systems? Introduce the standard state space model for control theory
-$\dot{x} = \matrix{A}\vec{x} + \matrix{B}\vec{u}$
+$\dot{x} = A}\vec{x} + \matrix{B}\vec{u}$
 
 We seek a representation for our data which will explain all of our dynamics, we have a new item we'll be tracking our hand _the cart_. So we'll be needing to include both $x$ and $\dot{x}$ for our new state space.
 
 $\vec{x}=[\theta, \dot{\theta}, x, \dot{x}]^T$
 
 We then wish to find $\matrix{A}$ so that the derivatives are equal. Trivially we'll have
+
 $\frac{d}{dt} \theta(t) = \dot{\theta}(t)$
+
 $\frac{d}{dt} x(t) = \dot{x}( t )$
 
 So we are  essentially we're trying to find what both $\ddot{\theta}$ and $\ddot{x}$ equal.
@@ -100,23 +107,24 @@ Then we'll linearize with our approximations for $\theta$.
 $\ddot{x_p} \approx \ddot{x_0} + l \cdot \ddot\theta$
 
 And finally we'll include a term for how the pendulum when it falls it will push on the cart in the opposite direction that the pendulum falls.
-$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \ddot{x}\div{l} \cdot\cos( \theta )$
+
+$\ddot{\theta}(t) = \frac{g}{L} \cdot sin( \theta ) - \frac{\ddot{x}}{l} \cdot\cos( \theta )$
 
 Substituting the expression for $\ddot{x}$ into the pendulum equation and linearizing $cos(\theta) \approx 1$, we obtain the coupled system.
 
 $\ddot{\theta} = \frac{(M + m)g}{ML} - \frac{F}{ML}$
-$\ddot{x} = -\frac{mg}iv{M}\cdot\Theta  + \frac{1}{M} \cdot F$
+$\ddot{x} = -\frac{mg}iv{M}\cdot\theta  + \frac{1}{M} \cdot F$
 
 Finally we have solved and determined that 
-$\dot{x} = \matrix{A}\vec{x} + \matrix{B}\vec{u}$
+$\dot{x} = A\vec{x} + B\vec{u}$
 
 $u = F$
 
-$vec{B} = [0, -\frac{1}{Ml}, 0, \frac{1}{m}]$
+$\vec{B} = [0, -\frac{1}{Ml}, 0, \frac{1}{m}]$
 
 ### Back to Programming
 
-We are *so* close to be doing so now the challenge is to implement our findings within code. If we note that $\ddot{Theta}$ doesn't depend upon $x$ we can simply determine the force and then find first $Theta$ and simply integrate. Afterwards we can apply the the same procedure for $x$.
+We are *so* close to be doing so now the challenge is to implement our findings within code. If we note that $\ddot{\theta}$ doesn't depend upon $x$ we can simply determine the force and then find first $\theta$ and simply integrate. Afterwards we can apply the the same procedure for $x$.
 
 
 ```cpp
@@ -139,7 +147,7 @@ void PendulumCart::control(float dt, float kp, float kd) {
 }
 ```
 
-Essentially that's the main control within the simulation! It's quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we'd have $O{n^3}$ opperations which for something so straight forward I simply iterated via the procedure above. 
+Essentially that's the main control within the simulation! It's quite trivially after the state space model derivation in order to get a solution. for the dynamics. If we were to use some sort of autodiff we'd have $O\({n^3}\)$ opperations which for something so straight forward I simply iterated via the procedure above. 
 
 There definitely do exist models where control is automatically derived and not all dynamics will be so transparent such that we utilize these methods to find closed form solutions. This is a special case of several simplifying assumptions and the fact that these are ODE's with known dynamics. However, everything was a great primer to brush up on several control theory concepts and to work with different proportions of control values and see how they interact.
 
