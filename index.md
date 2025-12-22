@@ -5,9 +5,9 @@ title: "Autumn Leaves"
 
 # 🍂 Autumn Leaves
 
-### Autumn Allmon — Developer | Computational Scientist | Lifelong Learner
+### Autumn Allmon — Systems Engineer | Computational Scientist
 
-*Leafnotes from a developer exploring code, math, and music.*  
+*Building high-performance systems at the intersection of mathematics and code.*
 
 {% for post in site.posts %}
   <div class="window">
