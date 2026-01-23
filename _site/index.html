@@ -16,6 +16,517 @@
 
 <div class="window">
     <div class="window-header">
+      Robotic Navigation: Planning Perception and Action <small>(2025-10-23)</small>
+    </div>
+    <div class="window-content">
+      <p><strong>Implementations</strong></p>
+<ul>
+  <li><a href="https://github.com/cyancirrus/sabrina">Main Repository</a></li>
+  <li><a href="https://github.com/cyancirrus/sabrina/blob/main/src/algo/a_star.rs">A* Implementation</a></li>
+  <li><a href="https://github.com/cyancirrus/sabrina/blob/main/src/algo/d_star.rs">D* Lite Implementation</a></li>
+</ul>
+
+<h2 id="planning-perception-action-ppa">Planning-Perception-Action (PPA)</h2>
+<p><img src="./assets/compression_plan.png" alt="Compression and Planning" /></p>
+
+<p>Planning-Perception-Action (PPA) is a closed feedback loop for robotic systems. I’ve been developing a navigation project that uses this loop, with the goal of enabling a robot car to autonomously navigate noisy, complex environments.
+But we start simple - building this from scratch one step at a time. To tackle this problem, we need the PPA loop, but what exactly is it?</p>
+
+<p><strong>Simply:</strong></p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>loop {
+    _*plan*_ a pth for moving from the current position to the destination
+    while plan_not_blocked {
+        - sensors _*perceive*_ the environment and may block the plan
+        - control _*actions*_ to follow the plan in the environment
+    }
+}
+</code></pre></div></div>
+
+<h2 id="planning---main-focus-and-post-overview">Planning - Main Focus and Post Overview</h2>
+
+<p>In this section, I’ll first go over what planning entails and how it relates to the “static” equivalent within the Planning-Perception-Action loop.<br />
+Next, we’ll investigate several algorithms, and finally, we’ll touch on data representation and compression.</p>
+
+<p><strong>Goals</strong></p>
+<ul>
+  <li>Review standard full-information algorithms</li>
+  <li>Explore A* and D* Lite</li>
+  <li>Explore methods to compress data efficiently</li>
+</ul>
+
+<h2 id="base-primitives-needed-for-search">Base Primitives Needed for Search</h2>
+
+<p>Before diving into algorithms, let’s define some key terms to make the discussion of search more precise.</p>
+
+<h4 id="graph-primitives">Graph Primitives</h4>
+
+<blockquote>
+  <p><strong>Node</strong> := A point within our representation<br />
+<strong>Edge</strong> := A connection between two points<br />
+<strong>Graph</strong> := A collection of nodes and edges where all points are fully reachable</p>
+</blockquote>
+
+<p>Graphs are often characterized as follows:</p>
+
+<p><strong>Edge Classification</strong></p>
+<blockquote>
+  <p><strong>Directed</strong> := A graph where edges have a unique direction, e.g., A → B<br />
+<strong>Undirected</strong> := A graph where an edge implies both directions are valid, e.g., A ↔ B</p>
+</blockquote>
+
+<p><strong>Cycle Constraints</strong></p>
+<blockquote>
+  <p><strong>Acyclic</strong> := The graph contains no cycles by definition<br />
+<strong>Cyclic</strong> := The graph may contain cycles (even if a specific instance doesn’t)</p>
+</blockquote>
+
+<p><strong>Examples</strong></p>
+<blockquote>
+  <p><strong>Grid</strong> := A cyclic undirected graph where each node has 4 neighbors<br />
+<strong>Binary Tree</strong> := An acyclic directed graph where each node has 2 neighbors<br />
+<strong>Singly Linked List</strong> := A directed graph where each node has 1 neighbor and can be pushed or popped</p>
+</blockquote>
+
+<p>Hopefully this terminology isn’t too intimidating! Looking at these examples, you can probably imagine other graphs in everyday life - like a family tree, a subway map, or even a flowchart for a process.</p>
+
+<h2 id="search-basics---depth-first-search-and-breadth-first-search">Search Basics - Depth First Search and Breadth First Search</h2>
+
+<p>Now that we have the base preliminaries out of the way, let’s dive into search algorithms.</p>
+
+<h3 id="what-is-search">What is Search?</h3>
+
+<p>For search, we need two extra pieces of information:</p>
+
+<ul>
+  <li><strong>Source</strong> := The current location within the graph</li>
+  <li><strong>Target</strong> := A condition which, when satisfied, halts the search</li>
+</ul>
+
+<hr />
+
+<h3 id="node-representation-in-rust">Node Representation in Rust</h3>
+
+<p>Let’s first look at how we can represent a node in Rust. <code class="language-plaintext highlighter-rouge">Box</code> is used here as a pointer to the heap, which allows Rust to handle recursive types cleanly:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
+    <span class="n">neighbors</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">Box</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="stopping-condition">Stopping Condition</h3>
+
+<p>For example, suppose our goal is to “find the node with value 5”.
+Starting at a node, we would:</p>
+
+<ol>
+  <li>Look at the neighbors</li>
+  <li>Explore each neighbor recursively (or in order)</li>
+  <li>Stop when we find the target</li>
+</ol>
+
+<p>Pseudo-code:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>while (there are neighbors to explore) {
+    if node.value == 5 {
+        return "We found it!"
+    }
+}
+return "Sadly, 5 does not appear in the graph"
+</code></pre></div></div>
+
+<hr />
+
+<h3 id="exploring-neighbors">Exploring Neighbors</h3>
+
+<p>Finally, the way we explore neighbors determines the type of search:</p>
+
+<ul>
+  <li><strong>Depth-First Search (DFS)</strong> explores as far as possible along one branch before backtracking.</li>
+  <li><strong>Breadth-First Search (BFS)</strong> explores all neighbors at the current depth before moving deeper.</li>
+</ul>
+
+<p>This distinction is what shapes the structure and efficiency of the search.</p>
+
+<hr />
+
+<h3 id="search-basics---depth-first-search-dfs">Search Basics - Depth First Search (DFS)</h3>
+
+<p>DFS is straightforward: when exploring a neighbor, we follow a path as far as possible before backtracking.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">depth_first_search</span><span class="p">(</span><span class="n">origin</span><span class="p">:</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">search_value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">bool</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">stack</span> <span class="o">=</span> <span class="nd">vec!</span><span class="p">[</span><span class="n">origin</span><span class="p">];</span>
+
+    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">=</span> <span class="n">stack</span><span class="nf">.pop</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">node</span><span class="py">.value</span> <span class="o">==</span> <span class="n">search_value</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">neighbor</span> <span class="k">in</span> <span class="n">node</span><span class="py">.neighbors</span> <span class="p">{</span>
+            <span class="n">stack</span><span class="nf">.push</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span> <span class="c1">// optional clone for simplicity</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Recall that a <strong>stack</strong> is Last In First Out (LIFO), so DFS explores the deepest nodes first.</p>
+
+<hr />
+
+<h3 id="breadth-first-search-bfs">Breadth First Search (BFS)</h3>
+
+<p>BFS looks almost identical, but we explore nodes closest to the origin first:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">fn</span> <span class="nf">breadth_first_search</span><span class="p">(</span><span class="n">origin</span><span class="p">:</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">search_value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">bool</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">queue</span> <span class="o">=</span> <span class="nn">VecDeque</span><span class="p">::</span><span class="nf">from</span><span class="p">([</span><span class="n">origin</span><span class="p">]);</span>
+
+    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">=</span> <span class="n">queue</span><span class="nf">.pop_front</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">node</span><span class="py">.value</span> <span class="o">==</span> <span class="n">search_value</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">neighbor</span> <span class="k">in</span> <span class="n">node</span><span class="py">.neighbors</span> <span class="p">{</span>
+            <span class="n">queue</span><span class="nf">.push_back</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span> <span class="c1">// optional clone for simplicity</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>BFS simply changes the underlying data structure from a stack to a queue. This changes the order in which neighbors are explored:</p>
+
+<ul>
+  <li>Nodes added earlier (closer to the origin) are explored first.</li>
+  <li>Queue = First In First Out (FIFO) → wide exploration.</li>
+</ul>
+
+<hr />
+
+<h3 id="comparing-dfs-and-bfs">Comparing DFS and BFS</h3>
+
+<ul>
+  <li>DFS searches <strong>deep and narrow</strong></li>
+  <li>BFS searches <strong>shallow and wide</strong></li>
+</ul>
+
+<p>Both DFS and BFS will find a node if it exists.
+<em>However</em>, they differ in efficiency, especially when we want the <strong>shortest path</strong>:</p>
+
+<ul>
+  <li>If the target location is known (e.g., navigating from home to the grocery store), BFS guarantees shortest-path discovery on a uniform-cost grid.</li>
+  <li>DFS may explore deeply in unhelpful directions first, which can be inefficient.</li>
+</ul>
+
+<p>This is the first glimpse of planning: choosing a search strategy impacts <strong>both correctness and efficiency</strong>.</p>
+
+<hr />
+
+<h3 id="dijkstras--optimization-under-different-edge-weights">Dijkstra’s – Optimization Under Different Edge Weights</h3>
+
+<p>Let’s revisit our simple example: <em>“I am trying to navigate from my home to the grocery store.”</em> The key idea is that <em>not all paths are created equal</em>.</p>
+
+<ul>
+  <li>For drivers, one path might use a highway, another a less congested street, or even a back road to avoid traffic.</li>
+  <li>For walkers or bikers, a different path might minimize red lights or intersections, even if it’s longer in distance.</li>
+</ul>
+
+<p>Even in this simple scenario, BFS (Breadth-First Search) can fail to find the optimal path because it assumes all edges are equal. So, what’s the solution?</p>
+
+<p>Dijkstra’s algorithm is structurally similar to BFS and DFS but introduces a critical change: it accounts for <strong>edge weights</strong> to always explore the cheapest path next.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">MinHeap</span> <span class="o">=</span> <span class="n">BinaryHeap</span><span class="o">&lt;</span><span class="n">MinNode</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">type</span> <span class="n">Neighbor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">usize</span><span class="p">,</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">// Node prioritized by minimum cost in MinHeap</span>
+<span class="k">struct</span> <span class="n">MinNode</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">cost</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">// Graph node with value and neighbors</span>
+<span class="k">struct</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">T</span><span class="p">,</span>
+    <span class="n">neighbors</span><span class="p">:</span> <span class="n">Neighbor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="n">dijkstras_algo</span><span class="o">&lt;</span><span class="n">T</span><span class="p">:</span> <span class="nb">PartialEq</span><span class="o">&gt;</span><span class="p">(</span><span class="n">origin</span><span class="p">:</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">search_value</span><span class="p">:</span> <span class="n">T</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">bool</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">p_queue</span><span class="p">:</span> <span class="n">MinHeap</span> <span class="o">=</span> <span class="nn">MinHeap</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span>
+    <span class="n">p_queue</span><span class="nf">.push</span><span class="p">(</span><span class="n">MinNode</span> <span class="p">{</span>
+        <span class="n">cost</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">node</span><span class="p">:</span> <span class="nn">Box</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">origin</span><span class="p">),</span>
+    <span class="p">});</span>
+
+    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">=</span> <span class="n">p_queue</span><span class="nf">.pop</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">current</span><span class="py">.node.value</span> <span class="o">==</span> <span class="n">search_value</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">neighbor</span><span class="p">)</span> <span class="k">in</span> <span class="o">&amp;</span><span class="n">current</span><span class="py">.node.neighbors</span> <span class="p">{</span>
+            <span class="n">p_queue</span><span class="nf">.push</span><span class="p">(</span><span class="n">MinNode</span> <span class="p">{</span>
+                <span class="n">cost</span><span class="p">:</span> <span class="n">current</span><span class="py">.cost</span> <span class="o">+</span> <span class="o">*</span><span class="n">weight</span><span class="p">,</span>
+                <span class="n">node</span><span class="p">:</span> <span class="nn">Box</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">()),</span>
+            <span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Note:</strong> <code class="language-plaintext highlighter-rouge">MinNode</code> is required because Rust’s default <code class="language-plaintext highlighter-rouge">BinaryHeap</code> is a max-heap. You could also use <code class="language-plaintext highlighter-rouge">Reverse</code> or implement the necessary traits to compare nodes by cost. A <code class="language-plaintext highlighter-rouge">MinHeap</code> guarantees that the smallest element is popped first by implementing the <code class="language-plaintext highlighter-rouge">Ord</code> trait; internal ordering is not guaranteed.</p>
+</blockquote>
+
+<p>Here’s a quick illustration in pseudo-code:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">min_heap</span><span class="nf">.push</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+<span class="n">min_heap</span><span class="nf">.push</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="n">min_heap</span><span class="nf">.push</span><span class="p">(</span><span class="mi">4</span><span class="p">);</span>
+<span class="n">min_heap</span><span class="nf">.push</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">=</span> <span class="n">min_heap</span><span class="nf">.pop</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nd">print!</span><span class="p">(</span><span class="s">"{value} "</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// Output: 1 2 3 4</span>
+</code></pre></div></div>
+
+<p>The key insights from Dijkstra’s algorithm:</p>
+
+<ul>
+  <li>Every neighbor we push onto the heap is considered in <strong>order of cumulative cost</strong>.</li>
+  <li>The next node we explore always has the <strong>lowest total cost from the start</strong>, ensuring we find the optimal path.</li>
+</ul>
+
+<p>This guarantees that the algorithm finds the <strong>globally optimal plan</strong>-the most efficient path to the goal. Note that there might be multiple equally optimal paths, but the path produced is guaranteed to be one of them.</p>
+
+<hr />
+
+<h3 id="a--using-heuristics-and-approximate-knowledge">A* – Using Heuristics and Approximate Knowledge</h3>
+
+<p>Great! We’ve now found the <strong>best path</strong> using Dijkstra. But you might be thinking:</p>
+
+<blockquote>
+  <p>“Sure, we found the plan, but like BFS, we explored <em>too much information</em>.”</p>
+</blockquote>
+
+<p>And you’re exactly right. Dijkstra examines <strong>every possible path</strong> in order to guarantee optimality-but often we don’t need to be that exhaustive.</p>
+
+<p>If we’re willing to <strong>compromise some global optimality</strong>, we can drastically reduce search complexity by <strong>focusing on the most promising candidates first</strong>.</p>
+
+<p>Let’s return to our navigation example: finding the best route from home to the grocery store.</p>
+
+<p><strong>What we know:</strong></p>
+
+<ul>
+  <li>The destination is fixed.</li>
+  <li>Distances are measurable (we’re in Euclidean space).</li>
+  <li>Each location/node is known.</li>
+</ul>
+
+<h4 id="introducing-distance-functions">Introducing Distance Functions</h4>
+
+<p>We can formalize “closeness” to our destination using a <strong>distance function</strong>:</p>
+
+<ul>
+  <li>The hypotenuse of a triangle is never longer than the sum of its sides:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>distance(a + b) &lt;= distance(a) + distance(b)
+</code></pre></div>    </div>
+  </li>
+  <li>Distances are never negative:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>distance(a) &gt;= 0
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p>For simplicity, we’ll use two intuitive options:</p>
+
+<ol>
+  <li><strong>Euclidean distance</strong> (straight-line distance):
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Euclidean = sqrt(dx^2 + dy^2)
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Manhattan distance</strong> (grid-based distance, only right-angle moves):
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Manhattan = dx + dy
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p>Since we’re thinking about <strong>city navigation</strong>, Manhattan distance is ideal-it matches the right-angle grid of streets and accounts for obstacles like buildings.</p>
+
+<h4 id="a-algorithm-combining-cost-and-heuristic">A* Algorithm: Combining Cost and Heuristic</h4>
+
+<p>Now that we can estimate how close a node is to the goal, we can <strong>prioritize nodes</strong> in our search. This is the essence of A*: instead of using only <code class="language-plaintext highlighter-rouge">g</code> (distance from start, like Dijkstra), we order nodes by:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>f = g + h
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">g</code> = cost from the start to this node</li>
+  <li><code class="language-plaintext highlighter-rouge">h</code> = heuristic estimate of cost from this node to the goal</li>
+</ul>
+
+<p>Here’s how this looks in Rust:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">MinHeap</span> <span class="o">=</span> <span class="n">BinaryHeap</span><span class="o">&lt;</span><span class="n">MinNode</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">type</span> <span class="n">Coord</span> <span class="o">=</span> <span class="p">(</span><span class="nb">usize</span><span class="p">,</span> <span class="nb">usize</span><span class="p">);</span> <span class="c1">// x, y location on the grid</span>
+<span class="k">type</span> <span class="n">Neighbor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="p">(</span><span class="nb">usize</span><span class="p">,</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">coord</span><span class="p">:</span> <span class="n">Coord</span><span class="p">,</span>
+    <span class="n">neighbors</span><span class="p">:</span> <span class="n">Neighbor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1">// Heap ordered by f = g + h</span>
+<span class="k">struct</span> <span class="n">MinNode</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">f</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span> <span class="c1">// total estimated cost</span>
+    <span class="n">g</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span> <span class="c1">// cost from start</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">Box</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="nf">heuristic_choice</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="n">Coord</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="n">Coord</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">usize</span> <span class="p">{</span>
+    <span class="c1">// Manhattan distance</span>
+    <span class="n">start</span><span class="na">.0</span><span class="nf">.abs_diff</span><span class="p">(</span><span class="n">end</span><span class="na">.0</span><span class="p">)</span> <span class="o">+</span> <span class="n">start</span><span class="na">.1</span><span class="nf">.abs_diff</span><span class="p">(</span><span class="n">end</span><span class="na">.1</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="n">a_star_algo</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">origin</span><span class="p">:</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Node</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">bool</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">p_queue</span><span class="p">:</span> <span class="n">MinHeap</span> <span class="o">=</span> <span class="nn">MinHeap</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span>
+    <span class="k">let</span> <span class="n">h0</span> <span class="o">=</span> <span class="nf">heuristic_choice</span><span class="p">(</span><span class="n">origin</span><span class="py">.coord</span><span class="p">,</span> <span class="n">target</span><span class="py">.coord</span><span class="p">);</span>
+
+    <span class="n">p_queue</span><span class="nf">.push</span><span class="p">(</span><span class="n">MinNode</span> <span class="p">{</span>
+        <span class="n">g</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">f</span><span class="p">:</span> <span class="n">h0</span><span class="p">,</span>
+        <span class="n">node</span><span class="p">:</span> <span class="nn">Box</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">origin</span><span class="p">),</span>
+    <span class="p">});</span>
+
+    <span class="k">while</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">=</span> <span class="n">p_queue</span><span class="nf">.pop</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">current</span><span class="py">.node.coord</span> <span class="o">==</span> <span class="n">target</span><span class="py">.coord</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">neighbor</span><span class="p">)</span> <span class="k">in</span> <span class="o">&amp;</span><span class="n">current</span><span class="py">.node.neighbors</span> <span class="p">{</span>
+            <span class="k">let</span> <span class="n">g_new</span> <span class="o">=</span> <span class="n">current</span><span class="py">.g</span> <span class="o">+</span> <span class="o">*</span><span class="n">weight</span><span class="p">;</span>
+            <span class="k">let</span> <span class="n">h_new</span> <span class="o">=</span> <span class="nf">heuristic_choice</span><span class="p">(</span><span class="n">neighbor</span><span class="py">.coord</span><span class="p">,</span> <span class="n">target</span><span class="py">.coord</span><span class="p">);</span>
+            <span class="k">let</span> <span class="n">f_new</span> <span class="o">=</span> <span class="n">g_new</span> <span class="o">+</span> <span class="n">h_new</span><span class="p">;</span>
+
+            <span class="n">p_queue</span><span class="nf">.push</span><span class="p">(</span><span class="n">MinNode</span> <span class="p">{</span>
+                <span class="n">g</span><span class="p">:</span> <span class="n">g_new</span><span class="p">,</span>
+                <span class="n">f</span><span class="p">:</span> <span class="n">f_new</span><span class="p">,</span>
+                <span class="n">node</span><span class="p">:</span> <span class="nn">Box</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">()),</span>
+            <span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h4 id="key-takeaways">Key Takeaways</h4>
+
+<ul>
+  <li>A* explores <strong>paths closer to the goal first</strong>, guided by the heuristic.</li>
+  <li>It’s not guaranteed to be <strong>globally optimal</strong> unless the heuristic is admissible (never overestimates), but it’s <strong>extremely efficient in practice</strong>.</li>
+  <li>In most real-world applications, A* finds a <strong>very intelligent path</strong> quickly-perfect for navigation or games where absolute optimality is less critical.</li>
+</ul>
+
+<hr />
+
+<h3 id="dlite--path-repair-and-stored-knowledge">D*Lite – Path Repair and Stored Knowledge</h3>
+
+<p>This section is a bit more conceptual. For actionable code, see my <a href="https://github.com/cyancirrus/sabrina/blob/main/src/algo/d_star.rs">D*Lite implementation</a>.</p>
+
+<blockquote>
+  <p>Note: This implementation uses a <strong>QuadTree for compression</strong>, assuming an underlying grid. My robotics implementation may not fit every use case exactly.</p>
+</blockquote>
+
+<p>We’ve come a long way! We have a great plan, we’re considering only the most promising directions, and we’re finding the best path using weighted edges and heuristics.</p>
+
+<p>But what happens if we’re on our way to the grocery store and suddenly… there’s a <strong>road closure</strong>?</p>
+
+<p>Sure, we could recompute a new plan from scratch. But wouldn’t it be smarter to <strong>reuse information from our previous plan</strong> to update only what changed?</p>
+
+<h4 id="conceptual-steps">Conceptual Steps</h4>
+
+<p>Like A*, D* Lite prioritizes promising nodes using a heuristic, and like Dijkstra, it accounts for weighted edges</p>
+
+<ol>
+  <li>You have an idea of how to get to the grocery store.</li>
+  <li>You see a road closed.</li>
+  <li>Since the blockage is local, only paths crossing the closed road need updating.</li>
+</ol>
+
+<p>D*Lite formalizes this idea. Instead of planning from <strong>Source → Target</strong>, we plan from <strong>Target → Source</strong>, then reconstruct the plan from the source using neighbors with <strong>lowest cost</strong> (costs are lower closer to the target).</p>
+
+<p><strong>High-Level Steps:</strong></p>
+
+<ul>
+  <li>Create a <strong>distance map</strong> from target → source.</li>
+  <li>Construct the plan by navigating to neighbors with lower distances from source → target.</li>
+  <li>Investigate only promising nodes (like A*) and account for <strong>edge weights</strong> (like Dijkstra).</li>
+</ul>
+
+<h4 id="core-functions-in-dlite">Core Functions in D*Lite</h4>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">G</span> <span class="o">=</span> <span class="nb">usize</span><span class="p">;</span> <span class="c1">// current estimate of cost-to-go</span>
+<span class="k">type</span> <span class="n">Rhs</span> <span class="o">=</span> <span class="nb">usize</span><span class="p">;</span> <span class="c1">// estimated cost from neighbors</span>
+
+<span class="k">fn</span> <span class="nf">update_vertex</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// update node estimate using neighbor information</span>
+    <span class="c1">// queue for update if inconsistent</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="nf">improve_and_invalidate</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// update neighbors when improvement occurs</span>
+    <span class="c1">// otherwise invalidate node and queue for update</span>
+<span class="p">}</span>
+
+<span class="k">fn</span> <span class="nf">compute_shortest_path</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// initialize target distance = 0</span>
+    <span class="c1">// initialize source distance = heuristic (infinite)</span>
+    <span class="c1">// refine neighbors until no improvements remain</span>
+<span class="p">}</span>
+
+<span class="k">pub</span> <span class="k">fn</span> <span class="nf">dstar_lite</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="n">Coord</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="c1">// compute_shortest_path</span>
+    <span class="c1">// reconstruct plan from source -&gt; target using distance map</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We initialize D*Lite by setting the <strong>source as inconsistent/infinite</strong> and the <strong>target at zero cost</strong>. Then, using a <strong>priority queue</strong> and a heuristic fucntion, we then refine the best paths forward.</p>
+
+<p>And just like that, we now have a <strong>robust, efficient, and adaptable way to navigate from Home → Supermarket</strong>, even if the environment changes.</p>
+
+<hr />
+
+<h3 id="summary">Summary</h3>
+
+<p>Thank you so much for reading!</p>
+
+<p><strong>Key Takeaways</strong></p>
+
+<ul>
+  <li>BFS/DFS: basic graph traversal</li>
+  <li>Dijkstra: optimal paths with weighted edges</li>
+  <li>A*: heuristic-guided, efficient search</li>
+  <li>D* Lite: dynamic path updates for changing environments</li>
+</ul>
+
+<p>Initially, I planned to cover <strong>quadtrees</strong> and the <strong>Perceive-Plan-Act loop</strong>, but that will be saved for the next post.</p>
+
+<p>In this post, we navigated the evolution from <strong>simple search</strong> to <strong>planning algorithms</strong>, building up from BFS to Dijkstra, A*, and finally <strong>D*Lite</strong>-a seminal algorithm from 2002!</p>
+
+<p>Next time, we’ll explore <strong>how to integrate planning into a live system with a closed loop</strong>, making navigation truly dynamic.</p>
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       An Introductory Project for Control Theory <small>(2025-10-23)</small>
     </div>
     <div class="window-content">
