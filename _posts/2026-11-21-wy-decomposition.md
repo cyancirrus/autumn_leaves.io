@@ -267,7 +267,7 @@ a_{10} & a_{11}
 \end{bmatrix}
 $$
 
-In row-major we simply represent the above matrix as
+**Row Major form** we simply represent the above matrix as
 
 ```Rust
 let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
@@ -277,7 +277,7 @@ print!("rm: {rm:?}");
 >> rm: [0, 1, 2, 3];
 ```
 
-Column Major Form (column-major) is a very similar way to organize data and would appear as
+**Column Major Form** is a very similar way to organize data and would appear as
 ```Rust
 let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
 let cm = vec![a00, a10, a01, a11];
