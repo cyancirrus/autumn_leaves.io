@@ -7,7 +7,7 @@ tags: [rust, planning, perception, action, learning]
 
 **Implementations**
 - [Main Repository](https://github.com/cyancirrus/stellar_math)
-- [Wy Decoposition](https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy)
+- [Wy Decomposition](https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy)
 - [Benchmark Script](https://github.com/cyancirrus/stellar-math/blob/main/scripts/lq_decomposition.sh)
 
 # WORK IN PROGRESS ARTICLE
@@ -18,7 +18,7 @@ tags: [rust, planning, perception, action, learning]
 _highlighted terms should be able to be found in article glossary_
 
 A `matrix` is a system of numbers defined by having `observations X features ` where a feature is a type of data, eg height, velocity, frequency, colour.
-Matrices are wildly used universally from medicine, to game design, to image editing software, to machine learning and engineering applications.
+Matrices are used universally from medicine, to game design, to image editing software, to machine learning and engineering applications.
 
 An Example of a Matrix ie the Identity Matrix:
 
@@ -57,7 +57,7 @@ Given the `QR` Decomposition we can now effectively solve systems of equations a
 The computer does not have infinite precision so it really matters how we go about manipulating numbers.
 
 QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used to drastically simplify problems, or to change their computation properties.
-QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it's constant factors for inference are near enpar with SVD.
+QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it's constant factors for inference are near on par with SVD.
 
 QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for randomized SVD.
 
@@ -68,10 +68,10 @@ In the coming sections, We will first hit the glossary as a reference point for 
 - Provide intuition for why the LQ decomposition is used in row major
 - Provide intuition for how blas and simd kernels can process data
 - Explore the derivation for WY and show a more optimal representation of T for row major form
-- Explore computational shortcuts used within my implimentation of these ideas
+- Explore computational shortcuts used within my implementation of these ideas
 
 Promise this will be worth it here are my results against Rust's most respected numerical library
-**TODO: change this link to of my benchmark results for small matricies**
+**TODO: change this link to of my benchmark results for small matrices**
 ![Benchmark Results WY Decomposition](./assets/wy_benchmark_results.png) 
 
 ## Base Primitives Needed for WY
@@ -86,7 +86,7 @@ _Click any of the following to expand_
 
 <details markdown="1">
 <summary><strong>Matrix Primitives</strong></summary>
-> **Matrix** := A "2dimensional" grid of numbers which have coherency in it's organization ie `observations X features`  
+> **Matrix** := A "2dimensional" grid of numbers which have coherency in its organization ie `observations X features`  
 > **Feature** := A type of measurement ie height, quantity colour, frequency etcetera  
 > **Observation** := A unit of an analysis ie a we surveyed fifty people and collected data, the person would be an observation  
 > **Rows** := A row is a slice of data from a matrix which pertain to all observations of a particular as a feature  

@@ -22,7 +22,7 @@
       <p><strong>Implementations</strong></p>
 <ul>
   <li><a href="https://github.com/cyancirrus/stellar_math">Main Repository</a></li>
-  <li><a href="https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy">Wy Decoposition</a></li>
+  <li><a href="https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy">Wy Decomposition</a></li>
   <li><a href="https://github.com/cyancirrus/stellar-math/blob/main/scripts/lq_decomposition.sh">Benchmark Script</a></li>
 </ul>
 
@@ -34,7 +34,7 @@
 <p><em>highlighted terms should be able to be found in article glossary</em></p>
 
 <p>A <code class="language-plaintext highlighter-rouge">matrix</code> is a system of numbers defined by having <code class="language-plaintext highlighter-rouge">observations X features </code> where a feature is a type of data, eg height, velocity, frequency, colour.
-Matrices are wildly used universally from medicine, to game design, to image editing software, to machine learning and engineering applications.</p>
+Matrices are used universally from medicine, to game design, to image editing software, to machine learning and engineering applications.</p>
 
 <p>An Example of a Matrix ie the Identity Matrix:</p>
 
@@ -67,7 +67,7 @@ Remembering \(\hat{Y}\) is not near-exact.</p>
 The computer does not have infinite precision so it really matters how we go about manipulating numbers.</p>
 
 <p>QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used to drastically simplify problems, or to change their computation properties.
-QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it’s constant factors for inference are near enpar with SVD.</p>
+QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it’s constant factors for inference are near on par with SVD.</p>
 
 <p>QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for randomized SVD.</p>
 
@@ -79,11 +79,11 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
   <li>Provide intuition for why the LQ decomposition is used in row major</li>
   <li>Provide intuition for how blas and simd kernels can process data</li>
   <li>Explore the derivation for WY and show a more optimal representation of T for row major form</li>
-  <li>Explore computational shortcuts used within my implimentation of these ideas</li>
+  <li>Explore computational shortcuts used within my implementation of these ideas</li>
 </ul>
 
 <p>Promise this will be worth it here are my results against Rust’s most respected numerical library
-<strong>TODO: change this link to of my benchmark results for small matricies</strong>
+<strong>TODO: change this link to of my benchmark results for small matrices</strong>
 <img src="./assets/wy_benchmark_results.png" alt="Benchmark Results WY Decomposition" /></p>
 
 <h2 id="base-primitives-needed-for-wy">Base Primitives Needed for WY</h2>
@@ -99,7 +99,7 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
 <details>
   <summary><strong>Matrix Primitives</strong></summary>
   <blockquote>
-    <p><strong>Matrix</strong> := A “2dimensional” grid of numbers which have coherency in it’s organization ie <code class="language-plaintext highlighter-rouge">observations X features</code><br />
+    <p><strong>Matrix</strong> := A “2dimensional” grid of numbers which have coherency in its organization ie <code class="language-plaintext highlighter-rouge">observations X features</code><br />
 <strong>Feature</strong> := A type of measurement ie height, quantity colour, frequency etcetera<br />
 <strong>Observation</strong> := A unit of an analysis ie a we surveyed fifty people and collected data, the person would be an observation<br />
 <strong>Rows</strong> := A row is a slice of data from a matrix which pertain to all observations of a particular as a feature<br />
@@ -293,7 +293,7 @@ a_{10} &amp; a_{11}
 2 &amp; 3
 \end{bmatrix}\]
 
-<p>In row-major we simply represent the above matrix as</p>
+<p><strong>Row Major form</strong> we simply represent the above matrix as</p>
 
 <pre><code class="language-Rust">let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
 let rm = vec![a00, a01, a10, a11];
@@ -302,7 +302,7 @@ print!("rm: {rm:?}");
 &gt;&gt; rm: [0, 1, 2, 3];
 </code></pre>
 
-<p>Column Major Form (column-major) is a very similar way to organize data and would appear as</p>
+<p><strong>Column Major Form</strong> is a very similar way to organize data and would appear as</p>
 <pre><code class="language-Rust">let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
 let cm = vec![a00, a10, a01, a11];
 print!("cm: {rm:?}");
