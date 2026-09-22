@@ -16,6 +16,296 @@
 
 <div class="window">
     <div class="window-header">
+      WY Decomposition <small>(2026-09-21)</small>
+    </div>
+    <div class="window-content">
+      <p><strong>Implementations</strong></p>
+<ul>
+  <li><a href="https://github.com/cyancirrus/stellar_math">Main Repository</a></li>
+  <li><a href="https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy">Wy Decoposition</a></li>
+  <li><a href="https://github.com/cyancirrus/stellar-math/blob/main/scripts/lq_decomposition.sh">Benchmark Script</a></li>
+</ul>
+
+<h1 id="work-in-progress-article">WORK IN PROGRESS ARTICLE</h1>
+<h2 id="todo-finish-article-and-then-split-out-into-the-sections-into-articles-and-functionally-add-article-type-filters">TODO: Finish article and then split out into the sections into articles and functionally add article type filters</h2>
+
+<h2 id="qr-decomposition">QR Decomposition</h2>
+
+<p><em>highlighted terms should be able to be found in article glossary</em></p>
+
+<p>A <code class="language-plaintext highlighter-rouge">matrix</code> is a system of numbers defined by having <code class="language-plaintext highlighter-rouge">observations X features </code> where a feature is a type of data, eg height, velocity, frequency, colour.
+Matrices are wildly used universally from medicine, to game design, to image editing software, to machine learning and engineering applications.</p>
+
+<p>An Example of a Matrix ie the Identity Matrix:</p>
+
+\[\begin{bmatrix}
+a_{00} &amp; a_{01} \\
+a_{10} &amp; a_{11}
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 &amp; 0 \\
+0 &amp; 1
+\end{bmatrix}\]
+
+<p>However, many of the formulas within these fields are strictly impractical if not impossible to compute if we naively implement them the way the math says to do so.
+Because computers when ultimately zoomed down compute in terms of bits and bytes, we have finite precision - and more importantly error itself will compound over matrix multiplication not simply addition - so no matter the finite precision which we would use, we are in still need of numerical methods - if we care at all for how long our method takes to calculate, or if we have any budget for memory whatsoever.</p>
+
+<p><code class="language-plaintext highlighter-rouge">QR</code> Decomposition is a specific way to split a <code class="language-plaintext highlighter-rouge">matrix</code> into component parts, such that when we multiply them we obtain the same values, and in reality with a very small amount of numerical error.
+ie</p>
+
+\[A = Q R + \epsilon\]
+
+<p>However, this is not like in statistics where we have a statistical error term due to the compression of the system ie that the number of features.
+Remembering \(\hat{Y}\) is not near-exact.</p>
+
+\[\hat{Y} = X B + \sigma e\]
+
+<p>In reality is almost better for the sake of this paper to presume that QR is exact or near-exact ie \(A = QR\).</p>
+
+<p>Given the <code class="language-plaintext highlighter-rouge">QR</code> Decomposition we can now effectively solve systems of equations as well as drmatically reduce the amount of work as well as the error.
+The computer does not have infinite precision so it really matters how we go about manipulating numbers.</p>
+
+<p>QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used to drastically simplify problems, or to change their computation properties.
+QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it’s constant factors for inference are near enpar with SVD.</p>
+
+<p>QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for randomized SVD.</p>
+
+<h2 id="wy-decomposition---main-focus-and-post-overview">WY Decomposition - Main Focus and Post Overview</h2>
+
+<p>In the coming sections, We will first hit the glossary as a reference point for definitions, then we’ll begin the tour of row major, simd and kernels, wy and then finally computational optimizations
+<strong>Goals</strong></p>
+<ul>
+  <li>Provide intuition for why the LQ decomposition is used in row major</li>
+  <li>Provide intuition for how blas and simd kernels can process data</li>
+  <li>Explore the derivation for WY and show a more optimal representation of T for row major form</li>
+  <li>Explore computational shortcuts used within my implimentation of these ideas</li>
+</ul>
+
+<p>Promise this will be worth it here are my results against Rust’s most respected numerical library
+<!-- TODO: change this link to of my benchmark results for small matricies or something small -->
+<img src="./assets/wy_benchmark_results.png" alt="Benchmark Results WY Decomposition" /></p>
+
+<h2 id="base-primitives-needed-for-wy">Base Primitives Needed for WY</h2>
+
+<p>Before diving into algorithms, lets get some definitions out of the way that way there can be a common reference point for the coming sections.</p>
+
+<h4 id="wy-primitives">WY Primitives</h4>
+
+<p><strong>Glossary of Terms</strong> Click the following to expand if want for a review</p>
+
+<details>
+  <summary><strong>Matrix Primitives</strong></summary>
+  <blockquote>
+    <p><strong>Matrix</strong> := A “2dimensional” grid of numbers which have coherency in it’s organization ie <code class="language-plaintext highlighter-rouge">observations X features</code><br />
+<strong>Feature</strong> := A type of measurement ie height, quantity colour, frequency etcetera<br />
+<strong>Observation</strong> := A unit of an analysis ie a we surveyed fifty people and collected data, the person would be an observation<br />
+<strong>Rows</strong> := A row is a slice of data from a matrix which pertain to all observations of a particular as a feature<br />
+<strong>Cols</strong> := A col eg column, is a slice of data from a matrix which pertains to all features for an individual<br />
+<strong>Transpose</strong> := Take a matrix and flip it across the diagonal, ie interpretation of rows becomes cols and cols becomes rows \(\forall i,j \epsilon A_{ij} &lt;- A_{ji}\)<br />
+<strong>Decomposition</strong> := The splitting of a matrix into different component parts such that we can reconstruct the matrix if needed ie \(A = QR\)</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Matrix Types Regarding Shape</strong></summary>
+  <blockquote>
+    <p><strong>Square</strong> := A matrix guaranteed as having the same number of rows as cols<br />
+<strong>Rectangular</strong> := A matrix not guaranteed to have the same number of rows as columns<br />
+<strong>Unspecified</strong> := A matrix is assumed to be rectangular<br />
+<strong>Block</strong> := A matrix of matrices, this is a logical way to “split” the matrix and merely is a clever way to refer to subportions of a matrix</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Matrix Types Regarding Numeric Density ie Where are the Zeros?</strong></summary>
+  <blockquote>
+    <p><strong>Dense</strong> := A matrix where there is a nonguarantee that any values are zeros<br />
+<strong>Lower Triangular</strong> := \(L\) this is a square matrix where for where all elements above a diagonal are zero<br />
+<strong>Lower Trapezoidal</strong> := \(L\) this is a rectangular matrix for where all elements above a diagonal are zero<br />
+<strong>Upper Triangular</strong> := \(R\) this is a square matrix where for all elements above a diagonal are zero<br />
+<strong>Upper Trapezoidal</strong> := \(R\) this is a rectangular matrix where for all elements above a diagonal are zero<br />
+<strong>Diagonal</strong> := a matrix having only entries on the diagonal</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Matrix Types Regarding Properties</strong></summary>
+  <blockquote>
+    <p><strong>Identity</strong> := A Diagonal matrix containing only the value 1, \(A_{ij} = \delta_{i==j}\);<br />
+<strong>Orthonormal</strong> := A matrix \(Q\) s.t. \(Q Q' \equiv I\) and \(Q' Q \equiv I\), geometrically this means for \(A Q\) we have taken the rows and rotated them and for \(Q A\) the cols.</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Matrix Abbreviations</strong></summary>
+  <blockquote>
+    <p><strong>Q</strong> := An orthonormal matrix<br />
+<strong>L</strong> := An left (lower) triangular matrix<br />
+<strong>R</strong> := A right (upper) triangular matrix<br />
+<strong>QR</strong> := A matrix decomposition which splits a matrix of numbers into component parts consisting of an orthonormal <code class="language-plaintext highlighter-rouge">Q</code> and a right (upper) triangular matrix <code class="language-plaintext highlighter-rouge">R</code><br />
+<strong>LQ</strong> := The transposition of (QR)’ ie <code class="language-plaintext highlighter-rouge">Right (Upper) Triangular</code> matrix becomes <code class="language-plaintext highlighter-rouge">Left (Lower) Triangular</code><br />
+<strong>WY</strong> := A decomposition s.t. we replace <code class="language-plaintext highlighter-rouge">Q</code> with a more optimized hybrid (wrt time and memory) form <code class="language-plaintext highlighter-rouge">Q ~ (I - YTY')</code> ie not materialized</p>
+  </blockquote>
+</details>
+
+<h2 id="use-cases-for-the-qr-decomposition">Use cases for the QR decomposition</h2>
+
+<p>QR Decomposition is a way to decompose a matrix (a system of numbers) into a form in which we can then use numerically to solve for specific quantities and enables use.
+The computer does not have infinite precision so it really matters how we go about manipulating numbers.</p>
+
+<p>QR Decomposition specifically allows to solve for unknowns quickly and accurately once calculated</p>
+
+<p>1) Solve \(Ax = y\) for \(x\) given knowledge of \(A\) and \(y\)</p>
+
+<details>
+  <summary>Click to expand Derivation</summary>
+  <div align="left">
+$$
+\begin{aligned}
+A &amp;\triangleq QR \\
+A x &amp;= y \\
+&amp;\implies \\
+Q R x &amp;= y \\
+Q' (Q R x) &amp;= Q' y \\
+R x &amp;= Q' y \\
+w &amp;\triangleq Q' y \\
+R x &amp;= w \\
+&amp;\implies \\
+&amp;x \text{ solved via back-substitution} \\
+\end{aligned}
+$$
+</div>
+</details>
+
+<p>QR Decomposition also allows us to project data for other algorithms and other learners dramatically reducing training time for certain algos</p>
+
+<p>2) Dimension Reduction by working with the covariances</p>
+
+<details>
+  <summary>Click to expand Derivation</summary>
+  <div align="left">
+$$
+\begin{aligned}
+\text{Goal} &amp;: f(X) \text{but fast} \\
+X &amp;\triangleq Q R \\
+R &amp;= Q' X \text{R available from QR}\\
+&amp;\implies \\
+\exists g( R ) &amp;: f(X) \approx Q * g( R ) \\
+\end{aligned}
+$$
+</div>
+</details>
+
+<p>For a specific instance of the solver consider we can look towards least squares and linear regression.</p>
+
+<details>
+  <summary>Click to expand Derivation</summary>
+  <div align="left">
+$$
+\textstyle
+\begin{aligned}
+Y_t &amp;= X_t B_t \\
+&amp;\implies \\
+B_t &amp;= (X_t' X_t)^{-1} X_t' Y_t \\
+X_t &amp;= QR \\
+&amp;\implies \\
+B_t &amp;= (R'Q'Q R)^{-1} R' Q' y_t \\
+B_t &amp;= (R' R)^{-1} R' Q' y_t \\
+B_t &amp;= R^{-1} R'^{-1} R' Q' y_t \\
+&amp;\text{recalling} \\
+(C D)^{-1} &amp;= D^{-1} C^{-1} \\
+&amp;\implies \\
+B_t &amp;= R^{-1} Q' Y_t \\
+&amp;\implies \\ 
+(Q R) B_t &amp;= Y_t \\
+&amp;\therefore \\
+&amp;B_t \text{ from using derivation (1) } \\
+&amp;\implies  \\
+\hat{y}_{t+1} &amp;= x_{t+1} B_t
+\end{aligned}
+$$
+</div>
+</details>
+
+<p>QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used in certain places as a way to drastically simplify problems.
+It’s a non-iterative algorithm so it runs in dertiministic time as compared to SVD and it’s constant factors for inference are near on par with SVD.</p>
+
+<p>QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for learning and efficiency.</p>
+
+<h2 id="lq-and-the-row-major-form">LQ and the Row Major Form</h2>
+
+<h3 id="row-major-definition-and-motivation">Row Major Definition and Motivation</h3>
+
+<details>
+  <summary><strong>Matrix Primitives</strong></summary>
+  <blockquote>
+    <p><strong>Matrix</strong> := A “2dimensional” grid of numbers which have coherency in it’s organization ie <code class="language-plaintext highlighter-rouge">observations X features</code><br />
+<strong>Cols</strong> := A col eg column, is a slice of data from a matrix which pertains to all features for an individual<br />
+<strong>Transpose</strong> := Take a matrix and flip it across the diagonal, ie interpretation of rows becomes cols and cols becomes rows \(\forall i,j \epsilon A_{ij} &lt;- A_{ji}\)</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Glossary: Technology</strong></summary>
+  <blockquote>
+    <p><strong>Blas</strong> := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today
+<strong>Fortran</strong> := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language <code class="language-plaintext highlighter-rouge">C</code> the standards of which still define current archetecture
+<strong>Vector</strong> := A vector is memory on the <code class="language-plaintext highlighter-rouge">heap</code> ie not <code class="language-plaintext highlighter-rouge">cache</code> where we allocate and pass around the <code class="language-plaintext highlighter-rouge">pointer</code> ie the <code class="language-plaintext highlighter-rouge">reference</code>
+<strong>Vector of Vectors</strong> := A representation of matrix which appears like <code class="language-plaintext highlighter-rouge">vec![vec![row1], ..., vec![rowm]]</code> expensive because of indirection
+<strong>Row Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a01, ..., a0n, ..., am0, ... amn]</code> example below
+<strong>Col Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a10, ..., am0, ..., a0n, ... amn]</code> example below
+<strong>SIMD</strong> := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization
+<strong>Kernel</strong> := A specific computational program which processes subparts of <code class="language-plaintext highlighter-rouge">matrix computation</code> via <code class="language-plaintext highlighter-rouge">SIMD</code> and advanced vector instructions which allow for parallelizaation</p>
+  </blockquote>
+</details>
+
+<p><code class="language-plaintext highlighter-rouge">Row Major Form</code> (row-major) is a way to organize a <code class="language-plaintext highlighter-rouge">matrix</code> which instead of having a <em>vector of vectors</em> instead we linearize the data by scanning <code class="language-plaintext highlighter-rouge">row</code> by <code class="language-plaintext highlighter-rouge">row</code>.
+The problem with the <code class="language-plaintext highlighter-rouge">vector of vectors</code> approach for the representation is that we would have tons of pointer chasing and more specifically the prefetcher has to work so much harder that it becomes an inefficient way to represent the data.</p>
+
+<p>Imagine the matrix:</p>
+
+\[\begin{bmatrix}
+a_{00} &amp; a_{01} \\
+a_{10} &amp; a_{11}
+\end{bmatrix}
+=
+\begin{bmatrix}
+0 &amp; 1 \\
+2 &amp; 3
+\end{bmatrix}\]
+
+<p>In row-major we simply represent the above matrix as</p>
+
+<pre><code class="language-Rust">let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
+let rm = vec![a00, a01, a10, a11];
+
+print!("rm: {rm:?}");
+&gt;&gt; rm: [0, 1, 2, 3];
+</code></pre>
+
+<p>Column Major Form (column-major) is a very similar way to organize data and would appear as</p>
+<pre><code class="language-Rust">let (a00, a01, a10, a11) = (0f32, 1f32, 2f32, 3f32);
+let cm = vec![a00, a10, a01, a11];
+print!("cm: {rm:?}");
+&gt;&gt; rm: [0, 2, 1, 3];
+</code></pre>
+<p>These both refer to the <em>same</em> matrix, they are just <em>different perspectives</em> on how one would represent and subsequently process said data.
+If you stare hard enough you can see that the <code class="language-plaintext highlighter-rouge">transpose</code> is the implicit connection between the two.
+This traditionally has been the long standing interface between modern code which now represents data as <code class="language-plaintext highlighter-rouge">row major</code> and the <code class="language-plaintext highlighter-rouge">Blas</code> style kernels.</p>
+
+<p>Essentially, historically <em>Fortran</em>, these mathematical concepts were all written in column major form.
+However, nowadays, most apis and data comes in row-major form as that has been the main way that <em>Computer Science</em> (CS) has structured data and so there’s been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.</p>
+
+<p>Even if the transpoistion can be <code class="language-plaintext highlighter-rouge">SIMD'd</code> this is still a full scan through the data which must happen</p>
+
+<h3 id="todo-continue-article-and-then-split-out-into-the-sections---and-add-like-article-type-filters">TODO: Continue article and then split out into the sections - and add like article type filters</h3>
+
+    </div>
+  </div>
+
+<div class="window">
+    <div class="window-header">
       Robotic Navigation: Planning Perception and Action <small>(2026-01-22)</small>
     </div>
     <div class="window-content">
@@ -35,7 +325,7 @@ But we start simple - building this from scratch one step at a time. To tackle t
 <p><strong>Simply:</strong></p>
 
 <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>loop {
-    _*plan*_ a pth for moving from the current position to the destination
+    *plan* a path for moving from the current position to the destination
     while plan_not_blocked {
         - sensors _*perceive*_ the environment and may block the plan
         - control _*actions*_ to follow the plan in the environment
@@ -166,7 +456,7 @@ return "Sadly, 5 does not appear in the graph"
         <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">neighbor</span> <span class="k">in</span> <span class="n">node</span><span class="py">.neighbors</span> <span class="p">{</span>
-            <span class="n">stack</span><span class="nf">.push</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span> <span class="c1">// optional clone for simplicity</span>
+            <span class="n">stack</span><span class="nf">.push</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span>
         <span class="p">}</span>
     <span class="p">}</span>
 
@@ -191,7 +481,7 @@ return "Sadly, 5 does not appear in the graph"
         <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">neighbor</span> <span class="k">in</span> <span class="n">node</span><span class="py">.neighbors</span> <span class="p">{</span>
-            <span class="n">queue</span><span class="nf">.push_back</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span> <span class="c1">// optional clone for simplicity</span>
+            <span class="n">queue</span><span class="nf">.push_back</span><span class="p">(</span><span class="n">neighbor</span><span class="nf">.clone</span><span class="p">());</span>
         <span class="p">}</span>
     <span class="p">}</span>
 
@@ -317,7 +607,10 @@ return "Sadly, 5 does not appear in the graph"
 
 <p>And you’re exactly right. Dijkstra examines <strong>every possible path</strong> in order to guarantee optimality-but often we don’t need to be that exhaustive.</p>
 
-<p>If we’re willing to <strong>compromise some global optimality</strong>, we can drastically reduce search complexity by <strong>focusing on the most promising candidates first</strong>.</p>
+<p>Designing a heuristic function under non-uniform edge weights is genuinely difficult.
+We must try to not overestimate remaining cost, as doing so removes A*’s guarantee of optimality.
+In many real modeling scenarios maintaining strict distance function coherence becomes impractical given the complexity of the cost model and the application itself, and near impossible when constrained by partial information.
+However, this does not imply that A* is without value in such settings; its usefulness depends on the modeling intent and the constraints of the problem.</p>
 
 <p>Let’s return to our navigation example: finding the best route from home to the grocery store.</p>
 
@@ -335,7 +628,10 @@ return "Sadly, 5 does not appear in the graph"
 
 <ul>
   <li>The hypotenuse of a triangle is never longer than the sum of its sides:
-    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>distance(a + b) &lt;= distance(a) + distance(b)
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>let a := x0 -&gt; x1;
+let b := x1 -&gt; x2;
+
+distance(a + b) &lt;= distance(a) + distance(b)
 </code></pre></div>    </div>
   </li>
   <li>Distances are never negative:
@@ -430,7 +726,7 @@ return "Sadly, 5 does not appear in the graph"
 
 <ul>
   <li>A* explores <strong>paths closer to the goal first</strong>, guided by the heuristic.</li>
-  <li>It’s not guaranteed to be <strong>globally optimal</strong> unless the heuristic is admissible (never overestimates), but it’s <strong>extremely efficient in practice</strong>.</li>
+  <li>While not guaranteed to be <strong>globally optimal</strong> if the heuristic overestimates, even heuristics merely approximately admissible often produce very good paths quickly.</li>
   <li>In most real-world applications, A* finds a <strong>very intelligent path</strong> quickly-perfect for navigation or games where absolute optimality is less critical.</li>
 </ul>
 
@@ -477,12 +773,12 @@ return "Sadly, 5 does not appear in the graph"
 
 <span class="k">fn</span> <span class="nf">update_vertex</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// update node estimate using neighbor information</span>
-    <span class="c1">// queue for update if inconsistent</span>
+    <span class="c1">// priority queue for update if inconsistent</span>
 <span class="p">}</span>
 
 <span class="k">fn</span> <span class="nf">improve_and_invalidate</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
     <span class="c1">// update neighbors when improvement occurs</span>
-    <span class="c1">// otherwise invalidate node and queue for update</span>
+    <span class="c1">// otherwise if inconsistent invalidate node and queue for update</span>
 <span class="p">}</span>
 
 <span class="k">fn</span> <span class="nf">compute_shortest_path</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
