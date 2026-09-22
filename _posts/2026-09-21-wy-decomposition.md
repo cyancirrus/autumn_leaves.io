@@ -106,10 +106,10 @@ _Click any of the following to expand_
 <details markdown="1">
 <summary><strong>Matrix Types Regarding Numeric Density ie Where are the Zeros?</strong></summary>
 > **Dense** := A matrix where there is a nonguarantee that any values are zeros  
-> **Lower Triangular** := $$L$$ this is a square matrix where for where all elements above a diagonal are zero  
-> **Lower Trapezoidal** := $$L$$ this is a rectangular matrix for where all elements above a diagonal are zero  
-> **Upper Triangular** := $$R$$ this is a square matrix where for all elements above a diagonal are zero  
-> **Upper Trapezoidal** := $$R$$ this is a rectangular matrix where for all elements above a diagonal are zero  
+> **Lower Triangular** := $$L$$ this is a square matrix where for where all elements above the diagonal are zero  
+> **Lower Trapezoidal** := $$L$$ this is a rectangular matrix for where all elements above the diagonal are zero  
+> **Upper Triangular** := $$R$$ this is a square matrix where for all elements below the diagonal are zero  
+> **Upper Trapezoidal** := $$R$$ this is a rectangular matrix where for all elements below the diagonal are zero  
 > **Diagonal** := a matrix having only entries on the diagonal
 </details>
 
