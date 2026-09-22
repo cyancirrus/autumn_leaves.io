@@ -83,7 +83,7 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
 </ul>
 
 <p>Promise this will be worth it here are my results against Rust’s most respected numerical library
-<!-- TODO: change this link to of my benchmark results for small matricies or something small -->
+<strong>TODO: change this link to of my benchmark results for small matricies</strong>
 <img src="./assets/wy_benchmark_results.png" alt="Benchmark Results WY Decomposition" /></p>
 
 <h2 id="base-primitives-needed-for-wy">Base Primitives Needed for WY</h2>
@@ -92,7 +92,9 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
 
 <h4 id="wy-primitives">WY Primitives</h4>
 
-<p><strong>Glossary of Terms</strong> Click the following to expand if want for a review</p>
+<p><strong>Glossary of Terms</strong></p>
+
+<p><em>Click any of the following to expand</em></p>
 
 <details>
   <summary><strong>Matrix Primitives</strong></summary>
@@ -146,6 +148,20 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
 <strong>QR</strong> := A matrix decomposition which splits a matrix of numbers into component parts consisting of an orthonormal <code class="language-plaintext highlighter-rouge">Q</code> and a right (upper) triangular matrix <code class="language-plaintext highlighter-rouge">R</code><br />
 <strong>LQ</strong> := The transposition of (QR)’ ie <code class="language-plaintext highlighter-rouge">Right (Upper) Triangular</code> matrix becomes <code class="language-plaintext highlighter-rouge">Left (Lower) Triangular</code><br />
 <strong>WY</strong> := A decomposition s.t. we replace <code class="language-plaintext highlighter-rouge">Q</code> with a more optimized hybrid (wrt time and memory) form <code class="language-plaintext highlighter-rouge">Q ~ (I - YTY')</code> ie not materialized</p>
+  </blockquote>
+</details>
+
+<details>
+  <summary><strong>Glossary: Technology</strong></summary>
+  <blockquote>
+    <p><strong>Blas</strong> := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today<br />
+<strong>Fortran</strong> := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language <code class="language-plaintext highlighter-rouge">C</code> the standards of which still define current archetecture<br />
+<strong>Vector</strong> := A vector is memory on the <code class="language-plaintext highlighter-rouge">heap</code> ie not <code class="language-plaintext highlighter-rouge">cache</code> where we allocate and pass around the <code class="language-plaintext highlighter-rouge">pointer</code> ie the <code class="language-plaintext highlighter-rouge">reference</code><br />
+<strong>Vector of Vectors</strong> := A representation of matrix which appears like <code class="language-plaintext highlighter-rouge">vec![vec![row1], ..., vec![rowm]]</code> expensive because of indirection<br />
+<strong>Row Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a01, ..., a0n, ..., am0, ... amn]</code> example below<br />
+<strong>Col Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a10, ..., am0, ..., a0n, ... amn]</code> example below<br />
+<strong>SIMD</strong> := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization<br />
+<strong>Kernel</strong> := A specific computational program which processes subparts of <code class="language-plaintext highlighter-rouge">matrix computation</code> via <code class="language-plaintext highlighter-rouge">SIMD</code> and advanced vector instructions which allow for parallelization</p>
   </blockquote>
 </details>
 
@@ -237,6 +253,8 @@ It’s a non-iterative algorithm so it runs in dertiministic time as compared to
 
 <h3 id="row-major-definition-and-motivation">Row Major Definition and Motivation</h3>
 
+<p><strong>Glossary of Refresher for this Article Subsetion</strong></p>
+
 <details>
   <summary><strong>Matrix Primitives</strong></summary>
   <blockquote>
@@ -249,14 +267,14 @@ It’s a non-iterative algorithm so it runs in dertiministic time as compared to
 <details>
   <summary><strong>Glossary: Technology</strong></summary>
   <blockquote>
-    <p><strong>Blas</strong> := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today
-<strong>Fortran</strong> := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language <code class="language-plaintext highlighter-rouge">C</code> the standards of which still define current archetecture
-<strong>Vector</strong> := A vector is memory on the <code class="language-plaintext highlighter-rouge">heap</code> ie not <code class="language-plaintext highlighter-rouge">cache</code> where we allocate and pass around the <code class="language-plaintext highlighter-rouge">pointer</code> ie the <code class="language-plaintext highlighter-rouge">reference</code>
-<strong>Vector of Vectors</strong> := A representation of matrix which appears like <code class="language-plaintext highlighter-rouge">vec![vec![row1], ..., vec![rowm]]</code> expensive because of indirection
-<strong>Row Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a01, ..., a0n, ..., am0, ... amn]</code> example below
-<strong>Col Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a10, ..., am0, ..., a0n, ... amn]</code> example below
-<strong>SIMD</strong> := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization
-<strong>Kernel</strong> := A specific computational program which processes subparts of <code class="language-plaintext highlighter-rouge">matrix computation</code> via <code class="language-plaintext highlighter-rouge">SIMD</code> and advanced vector instructions which allow for parallelizaation</p>
+    <p><strong>Blas</strong> := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today<br />
+<strong>Fortran</strong> := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language <code class="language-plaintext highlighter-rouge">C</code> the standards of which still define current archetecture<br />
+<strong>Vector</strong> := A vector is memory on the <code class="language-plaintext highlighter-rouge">heap</code> ie not <code class="language-plaintext highlighter-rouge">cache</code> where we allocate and pass around the <code class="language-plaintext highlighter-rouge">pointer</code> ie the <code class="language-plaintext highlighter-rouge">reference</code><br />
+<strong>Vector of Vectors</strong> := A representation of matrix which appears like <code class="language-plaintext highlighter-rouge">vec![vec![row1], ..., vec![rowm]]</code> expensive because of indirection<br />
+<strong>Row Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a01, ..., a0n, ..., am0, ... amn]</code> example below<br />
+<strong>Col Major Form</strong> := A linearized representation of matrix which appearing as <code class="language-plaintext highlighter-rouge">vec![a00, a10, ..., am0, ..., a0n, ... amn]</code> example below<br />
+<strong>SIMD</strong> := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization<br />
+<strong>Kernel</strong> := A specific computational program which processes subparts of <code class="language-plaintext highlighter-rouge">matrix computation</code> via <code class="language-plaintext highlighter-rouge">SIMD</code> and advanced vector instructions which allow for parallelization</p>
   </blockquote>
 </details>
 

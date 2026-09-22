@@ -71,7 +71,7 @@ In the coming sections, We will first hit the glossary as a reference point for 
 - Explore computational shortcuts used within my implimentation of these ideas
 
 Promise this will be worth it here are my results against Rust's most respected numerical library
-<!-- TODO: change this link to of my benchmark results for small matricies or something small -->
+**TODO: change this link to of my benchmark results for small matricies**
 ![Benchmark Results WY Decomposition](./assets/wy_benchmark_results.png) 
 
 ## Base Primitives Needed for WY
@@ -80,7 +80,9 @@ Before diving into algorithms, lets get some definitions out of the way that way
 
 #### WY Primitives
 
-**Glossary of Terms** Click the following to expand if want for a review
+**Glossary of Terms**
+
+_Click any of the following to expand_
 
 <details markdown="1">
 <summary><strong>Matrix Primitives</strong></summary>
@@ -125,6 +127,18 @@ Before diving into algorithms, lets get some definitions out of the way that way
 > **QR** := A matrix decomposition which splits a matrix of numbers into component parts consisting of an orthonormal `Q` and a right (upper) triangular matrix `R`  
 > **LQ** := The transposition of (QR)' ie `Right (Upper) Triangular` matrix becomes `Left (Lower) Triangular`  
 > **WY** := A decomposition s.t. we replace `Q` with a more optimized hybrid (wrt time and memory) form `Q ~ (I - YTY')` ie not materialized 
+</details>
+
+<details markdown="1">
+<summary><strong>Glossary: Technology</strong></summary>
+> **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today  
+> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture  
+> **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`  
+> **Vector of Vectors** := A representation of matrix which appears like `vec![vec![row1], ..., vec![rowm]]` expensive because of indirection  
+> **Row Major Form** := A linearized representation of matrix which appearing as `vec![a00, a01, ..., a0n, ..., am0, ... amn]` example below  
+> **Col Major Form** := A linearized representation of matrix which appearing as `vec![a00, a10, ..., am0, ..., a0n, ... amn]` example below  
+> **SIMD** := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization  
+> **Kernel** := A specific computational program which processes subparts of `matrix computation` via `SIMD` and advanced vector instructions which allow for parallelization  
 </details>
 
 ## Use cases for the QR decomposition
@@ -214,6 +228,8 @@ QR is one of the major tool for any industry which uses mathematics as a vehicle
 ## LQ and the Row Major Form
 
 ### Row Major Definition and Motivation
+
+**Glossary of Refresher for this Article Subsetion**
 
 <details markdown="1">
 <summary><strong>Matrix Primitives</strong></summary>
