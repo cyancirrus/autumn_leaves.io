@@ -224,14 +224,14 @@ QR is one of the major tool for any industry which uses mathematics as a vehicle
 
 <details markdown="1">
 <summary><strong>Glossary: Technology</strong></summary>
-> **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today
-> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture
-> **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`
-> **Vector of Vectors** := A representation of matrix which appears like `vec![vec![row1], ..., vec![rowm]]` expensive because of indirection
-> **Row Major Form** := A linearized representation of matrix which appearing as `vec![a00, a01, ..., a0n, ..., am0, ... amn]` example below
-> **Col Major Form** := A linearized representation of matrix which appearing as `vec![a00, a10, ..., am0, ..., a0n, ... amn]` example below
-> **SIMD** := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization
-> **Kernel** := A specific computational program which processes subparts of `matrix computation` via `SIMD` and advanced vector instructions which allow for parallelizaation
+> **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today  
+> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture  
+> **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`  
+> **Vector of Vectors** := A representation of matrix which appears like `vec![vec![row1], ..., vec![rowm]]` expensive because of indirection  
+> **Row Major Form** := A linearized representation of matrix which appearing as `vec![a00, a01, ..., a0n, ..., am0, ... amn]` example below  
+> **Col Major Form** := A linearized representation of matrix which appearing as `vec![a00, a10, ..., am0, ..., a0n, ... amn]` example below  
+> **SIMD** := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization  
+> **Kernel** := A specific computational program which processes subparts of `matrix computation` via `SIMD` and advanced vector instructions which allow for parallelization  
 </details>
 
 `Row Major Form` (row-major) is a way to organize a `matrix` which instead of having a _vector of vectors_ instead we linearize the data by scanning `row` by `row`.
