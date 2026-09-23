@@ -220,9 +220,6 @@ $$
 </div>
 </details>
 
-QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used in certain places as a way to drastically simplify problems.
-It's a non-iterative algorithm so it runs in dertiministic time as compared to SVD and it's constant factors for inference are near on par with SVD.
-
 QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for learning and efficiency.
 
 ## LQ and the Row Major Form
@@ -293,4 +290,94 @@ However, nowadays, most apis and data comes in row-major form as that has been t
 
 Even if the transpoistion can be `SIMD'd` this is still a full scan through the data which must happen 
 
-### TODO: Continue article and then split out into the sections - and add like article type filters
+
+## Justifying LQ
+
+### WY Derivation - the importance of the Triangle form
+
+The original QR is a masterpiece however it presumes a column major format. If we look at the LQ form of decomposition, ie (QR)', and if we carry this detail further we can see that our triangle update becomes
+
+_Here I am going to presume some level of fluency in linear algebra but this is a meaningful gesture at the full derivation_
+
+<details markdown="1">
+<summary><strong>WY Triangle Update Weak Derivation</strong></summary>
+```
+LQ;
+// notice decreasing
+Q := Product[n..0] (I - c_i * v_i v_i');
+
+WY we want something like
+Product[0..n].rev() (I - c * v * v') = (I - YTY');
+
+lets first define Y as the following
+Y = [v0 | v1 | .. |vn];
+Y' = [v0'; v1'; ..; vn'];
+
+now let Y[0] equal 
+y[0] = [v0];
+
+and y[1] equal
+y[v0 | v1]; 
+
+ie we just slice
+
+for 
+Q_0 = I - c_0 v_0 v_0'
+
+should be equivalent to
+Q_0 = I - y[0]t[0]y[0]';
+    = I - [v0]t[0][v0]';
+=>
+t[0] = [c0];
+
+
+then lets imagine Q_1;
+Q_1 = (I - c1 v1 v1')(I - c0 v0 v0');
+    = I - (c1 v1 v1' + c0 v0 v0' - c1 c0 v1 v1' v0 v0');
+
+
+lets think of t[1] as t[0] with some unknowns
+t[1] = [t[0], 0],[0, g1];
+
+=>
+y[1]t[1] = [v0, v1] [t[0], 0],[g0, g1] = [v0 * t[0] + g0 * v1, v1 * g1];
+
+=> y[1]t[1]y[1]
+= [v0 * t[0] + g0 * v1, v1 * g1] * [ v0'; v1'];
+= v0 * t0 * v0' + g0 * v1 * v0' + v1 * g1 * v1';
+
+// first lets look at g1, this obviously needs to be c1 b/c of the outer product forces
+g1 = c1
+
+// g0 then must be what makes it equal and we can see that we're missing the term
+// -c1 c0 v1v1'v0v0'
+=>
+g0 = - t0 * t1 * v1'v0;
+
+=> T[1] = [-c1; -c_0 c1 v1'v0, -c1]
+
+// to get the full recursion consider this block form and analyze as we did above
+
+Q_{i+1} = (I - c_{i+1} w_{i+1} w_{i+1}')(I - Y_t T_t Y_t');
+
+
+// after a bit of algebra you'll find
+
+T[k] = ((T_{k-1}, 0), (-tau_k * w_k' Y_{k-1} T_{k-1}, tau));
+
+```
+</details>
+
+Our update becomes an append only form requiring only one row of history for the triangle and for the Y matrix.
+If one were to try to use the update matrix from WY(QR) one would find that one has the wrong outer product form and that the Y[k-1] appears on the wrong side.
+The cross product appears in the wrong direction.
+One is forced into accepting that for WY(QR) one must require an upper triangular matrix.
+This would then force an odd update form wrt to row major form, which then forces a needed transpose if one is in row major, before any decomposition work can begin.
+
+Hopefully you can see both the intuition for how WY is derived and why I deviated from the traditional representation of QR once we consider this in the WY decomposition.
+This allows me to be able to split the triangle matrix into solved vs not solved portions which while also helping with safety features in rust b/c now we can partition where the data is changing versus where it is not
+Not only does this triangle form drastically help the memory prefetcher.
+The memory prefetcher has the householder vectors in linear order and doesn't need to jump scan every single data point.
+
+I've merely obtained these gains by conjugating the QR decomposition with it's wanted row-major representation LQ.
+After doing so all of these years of optimizations are now available in the more modern row-major form.
