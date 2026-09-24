@@ -295,7 +295,29 @@ Even if the transpoistion can be `SIMD'd` this is still a full scan through the 
 
 ### WY Derivation - the importance of the Triangle form
 
-The original QR is a masterpiece however it presumes a column major format. If we look at the LQ form of decomposition, ie (QR)', and if we carry this detail further we can see that our triangle update becomes
+The original QR is a masterpiece however it presumes a column major format.
+
+One of the main benefits from the WY form is that we only need to have access to the current rows data for the householder vector in order to find it's zeros first consider the row-major representations of the following.
+
+LQ, lets consider zeroing the $row_k$ we can simply consider the values, ie each of these are simple floats -> Order M.
+```
+[rk0, ..., rkn];
+```
+
+
+However lets look at QR when trying to zero the column_i in row major form we would need the following data
+```
+[row_0..k,r0k, row_0k+1],
+[row_1..k,r1k, row_1k+1],
+[      ...             ],
+[row_m..k, r_mk, ...   ],
+```
+requiring nearly the entire matrix! -> Order M x N.
+
+While the memory prefetcher is genius this genuinely thrashes the cache significantly if we represent the data in row major form.
+This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form.
+
+If we continue at the LQ form of decomposition, and if we carry this detail further we can see that our triangle update becomes
 
 _Here I am going to presume some level of fluency in linear algebra but this is a meaningful gesture at the full derivation_
 
