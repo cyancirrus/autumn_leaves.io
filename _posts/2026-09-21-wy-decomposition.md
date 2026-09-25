@@ -45,7 +45,7 @@ A = Q R + \epsilon
 $$
 
 However, this is not like in statistics where we have a statistical error term due to the compression of the system ie that the number of features.
-Remembering $$\hat{Y}$$ is not near-exact.
+Remembering $\hat{Y}$ is _almost never_ near-exact unlike QR's $\epsilon$, numerical noise sitting near the machine precision limit ie $1e-7$ (float 32).
 
 $$
 \hat{Y} = X B + \sigma e
@@ -66,9 +66,7 @@ QR is one of the major tool for any industry which uses mathematics as a vehicle
 In the coming sections, We will first hit the glossary as a reference point for definitions, then we'll begin the tour of row major, simd and kernels, wy and then finally computational optimizations
 **Goals**
 - Provide intuition for why the LQ decomposition is used in row major
-- Provide intuition for how blas and simd kernels can process data
 - Explore the derivation for WY and show a more optimal representation of T for row major form
-- Explore computational shortcuts used within my implementation of these ideas
 
 Promise this will be worth it here are my results against Rust's most respected numerical library
 **TODO: change this link to of my benchmark results for small matrices**
@@ -130,7 +128,7 @@ _Click any of the following to expand_
 </details>
 
 <details markdown="1">
-<summary><strong>Glossary: Technology</strong></summary>
+<summary><strong>Computation Technology</strong></summary>
 > **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today  
 > **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture  
 > **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`  
@@ -222,30 +220,9 @@ $$
 
 QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for learning and efficiency.
 
-## LQ and the Row Major Form
+## LQ Justification: The Want for a Row Major Representation of QR
 
-### Row Major Definition and Motivation
-
-**Glossary of Refresher for this Article Subsetion**
-
-<details markdown="1">
-<summary><strong>Matrix Primitives</strong></summary>
-> **Matrix** := A "2dimensional" grid of numbers which have coherency in it's organization ie `observations X features`  
-> **Cols** := A col eg column, is a slice of data from a matrix which pertains to all features for an individual  
-> **Transpose** := Take a matrix and flip it across the diagonal, ie interpretation of rows becomes cols and cols becomes rows $$\forall i,j \epsilon A_{ij} <- A_{ji}$$  
-</details>
-
-<details markdown="1">
-<summary><strong>Glossary: Technology</strong></summary>
-> **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today  
-> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture  
-> **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`  
-> **Vector of Vectors** := A representation of matrix which appears like `vec![vec![row1], ..., vec![rowm]]` expensive because of indirection  
-> **Row Major Form** := A linearized representation of matrix which appearing as `vec![a00, a01, ..., a0n, ..., am0, ... amn]` example below  
-> **Col Major Form** := A linearized representation of matrix which appearing as `vec![a00, a10, ..., am0, ..., a0n, ... amn]` example below  
-> **SIMD** := Same Instruction Multiple Data (S.I.M.D.) refers to advanced vector instructions which allow for speed of numerical computation via parallelization  
-> **Kernel** := A specific computational program which processes subparts of `matrix computation` via `SIMD` and advanced vector instructions which allow for parallelization  
-</details>
+### Row Major Form Definition and Clarification
 
 `Row Major Form` (row-major) is a way to organize a `matrix` which instead of having a _vector of vectors_ instead we linearize the data by scanning `row` by `row`.
 The problem with the `vector of vectors` approach for the representation is that we would have tons of pointer chasing and more specifically the prefetcher has to work so much harder that it becomes an inefficient way to represent the data.
@@ -290,10 +267,7 @@ However, nowadays, most apis and data comes in row-major form as that has been t
 
 Even if the transpoistion can be `SIMD'd` this is still a full scan through the data which must happen 
 
-
-## Justifying LQ
-
-### WY Derivation - the importance of the Triangle form
+### WY Derivation - the importance of the Row Major Form
 
 The original QR is a masterpiece however it presumes a column major format.
 
@@ -319,87 +293,166 @@ This is why most libraries will transpose their data prior to using the QR decom
 
 If we continue at the LQ form of decomposition, and if we carry this detail further we can see that our triangle update becomes
 
-_Here I am going to presume some level of fluency in linear algebra but this is a meaningful gesture at the full derivation_
+### WY Mathematical Derivation and the Forced Lower Triangle T
+
+I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, so I thought I would provide it.
+
+_Here I am going to presume some level of fluency in linear algebra while not being mathematically complete,
+still is a meaningful gesture at the full derivation and will help provide mathematical intuition for the form of the full derivation_
+
 
 <details markdown="1">
-<summary><strong>WY Triangle Update Weak Derivation</strong></summary>
-```
-LQ;
-// notice decreasing
-Q := Product[n..0] (I - c_i * v_i v_i');
+<summary><strong>Quick and Dirty Derivation </strong></summary>
 
-WY we want something like
-Product[0..n].rev() (I - c * v * v') = (I - YTY');
+Assume $QR = (I - Y T Y^\top)$, where $T$ is a forced Upper Triangle Matrix
 
-lets first define Y as the following
-Y = [v0 | v1 | .. |vn];
-Y' = [v0'; v1'; ..; vn'];
+Let us relable with $QR = (I - Y U Y^\top)$;
 
-now let Y[0] equal 
-y[0] = [v0];
+$ LQ = (QR)^\top = R^\top (I - YUY^\top)^\top $
 
-and y[1] equal
-y[v0 | v1]; 
+Recalling $$(AB)^\top = B^\top A^\top$$
 
-ie we just slice
+=> 
+$$(Y U Y^\top)^\top = (Y^\top)^\top U^\top Y^\top = Y U^\top Y^\top$$
 
-for 
-Q_0 = I - c_0 v_0 v_0'
+- Relabel $R^\top$ as $L$ (the Right triangle transpose becomes Left Triangle)
+- Relabel $U^\top$ to $L$ (the Upper triangle transpose becomes Lower Triangle)
 
-should be equivalent to
-Q_0 = I - y[0]t[0]y[0]';
-    = I - [v0]t[0][v0]';
-=>
-t[0] = [c0];
+we find 
+$LQ = L(I - Y L Y^\top)$
 
-
-then lets imagine Q_1;
-Q_1 = (I - c1 v1 v1')(I - c0 v0 v0');
-    = I - (c1 v1 v1' + c0 v0 v0' - c1 c0 v1 v1' v0 v0');
-
-
-lets think of t[1] as t[0] with some unknowns
-t[1] = [t[0], 0],[0, g1];
+this is just for intuitons, mathematicians cover your eyes...
 
 =>
-y[1]t[1] = [v0, v1] [t[0], 0],[g0, g1] = [v0 * t[0] + g0 * v1, v1 * g1];
-
-=> y[1]t[1]y[1]
-= [v0 * t[0] + g0 * v1, v1 * g1] * [ v0'; v1'];
-= v0 * t0 * v0' + g0 * v1 * v0' + v1 * g1 * v1';
-
-// first lets look at g1, this obviously needs to be c1 b/c of the outer product forces
-g1 = c1
-
-// g0 then must be what makes it equal and we can see that we're missing the term
-// -c1 c0 v1v1'v0v0'
-=>
-g0 = - t0 * t1 * v1'v0;
-
-=> T[1] = [-c1; -c_0 c1 v1'v0, -c1]
-
-// to get the full recursion consider this block form and analyze as we did above
-
-Q_{i+1} = (I - c_{i+1} w_{i+1} w_{i+1}')(I - Y_t T_t Y_t');
-
-
-// after a bit of algebra you'll find
-
-T[k] = ((T_{k-1}, 0), (-tau_k * w_k' Y_{k-1} T_{k-1}, tau));
-
-```
+$$LQ = L(I - Y T Y^\top)$$; where $T$ is a forced Lower Triangle Matrix
 </details>
 
-Our update becomes an append only form requiring only one row of history for the triangle and for the Y matrix.
-If one were to try to use the update matrix from WY(QR) one would find that one has the wrong outer product form and that the Y[k-1] appears on the wrong side.
-The cross product appears in the wrong direction.
-One is forced into accepting that for WY(QR) one must require an upper triangular matrix.
-This would then force an odd update form wrt to row major form, which then forces a needed transpose if one is in row major, before any decomposition work can begin.
+> If one does not wish to imagine the full derivation this while being extremely unrigorous gives intuition
+
+<details markdown="1">
+<summary><strong>Semi-Rigourous Derivation </strong></summary>
+
+<details markdown="1">
+<summary><strong>1. Problem Setup and Decreasing order</strong></summary>
+
+Notice the decreasing order of the product:
+
+$$Q := \prod_{i=1}^{n} (I - \tau_{n-i} v_{n-i} v_{n-i}^\top)$$
+
+$$Q := (I - \tau_{n-1} v_{n-1} v_{n-1}^\top) \cdots (I - \tau_0 v_0 v_0^\top)$$
+
+We want to find a compact representation of the form:
+
+$$\prod_{i=1}^{n} (I - \tau_{n-i} v_{n-i} v_{n-i}^\top) = I - Y T Y^\top$$
+</details>
+
+<details markdown="1">
+<summary><strong>2. Matrix Definitions</strong></summary>
+
+Let's first define the matrix $Y$ in terms of the individual column vectors and $Y^\top$ as its column vectors transposed:
+
+$$Y = \begin{bmatrix} v_0 & v_1 & \cdots & v_n \end{bmatrix}$$
+,
+$$Y^\top = \begin{bmatrix} v_0^\top \\ v_1^\top \\ \vdots \\ v_n^\top \end{bmatrix}$$
+
+Now, let's define the initial partitions for our progressive steps:
+
+$$Y_0 = \begin{bmatrix} v_0 \end{bmatrix}$$
+
+and
+
+$$Y_1 = \begin{bmatrix} v_0 & v_1 \end{bmatrix}$$
+</details>
+
+<details markdown="1">
+<summary><strong>3. Base Case ($Q_0$)</strong></summary>
+
+For $Q_0 = I - \tau_0 v_0 v_0^\top$, it should be equivalent to:
+
+$$Q_0 = I - Y_0 T_0 Y_0^\top = I - v_0 \tau_0 v_0^\top$$
+
+$$\implies T_0 = \begin{bmatrix} \tau_0 \end{bmatrix}$$
+</details>
+
+<details markdown="1">
+<summary><strong>4. Inductive Step ($Q_1$)</strong></summary>
+Then let's imagine $Q_1$:
+
+$$Q_1 = (I - \tau_1 v_1 v_1^\top)(I - \tau_0 v_0 v_0^\top)$$
+
+$$= I - (\tau_1 v_1 v_1^\top + \tau_0 v_0 v_0^\top - \tau_1 \tau_0 v_1 v_1^\top v_0 v_0^\top)$$
+
+Let's think of $T_1$ as $T_0$ expanded with some unknowns recalling $T_0 = \begin{bmatrix} \tau_0 \end{bmatrix}$:
+
+$$T_1 = \begin{bmatrix} T_0 & 0 \\ \gamma_0 & \gamma_1 \end{bmatrix}$$
+
+$$\implies Y_1 T_1 = \begin{bmatrix} v_0 & v_1 \end{bmatrix} \begin{bmatrix} \tau_0 & 0 \\ \gamma_0 & \gamma_1 \end{bmatrix}$$
+
+$$\implies Y_1 T_1 = \begin{bmatrix} v_0 \tau_0 + \gamma_0 v_1 & v_1 \gamma_1 \end{bmatrix}$$
+
+$$\implies Y_1 T_1 Y_1^\top = \begin{bmatrix} v_0 \tau_0 + \gamma_0 v_1 & v_1 \gamma_1 \end{bmatrix} \begin{bmatrix} v_0^\top \\ v_1^\top \end{bmatrix} = v_0 \tau_0 v_0^\top + \gamma_0 v_1 v_0^\top + v_1 \gamma_1 v_1^\top$$
+
+##### Solving for the Unknowns in $T_1$:
+
+1. First, look at $\gamma_1$. This obviously needs to be $\tau_1$ because of the outer product forces:
+
+$$\gamma_1 = \tau_1$$
+
+
+2. $\gamma_0$ then must be what makes it equal, accounting for the missing term $-\tau_1 \tau_0 v_1 v_1^\top v_0 v_0^\top$:
+
+$$\gamma_0 = -\tau_0 \tau_1 v_1^\top v_0$$
+
+
+Finally, we end with our fully qualified triangular matrix:
+
+$$T_1 = \begin{bmatrix} \tau_0 & 0 \\ -\tau_0 \tau_1 v_1^\top v_0 & \tau_1 \end{bmatrix}$$
+</details>
+
+<details markdown="1">
+<summary><strong>5. General Recursion</strong></summary>
+To get the full recursion, consider this block form:
+
+$$Q_{i+1} = (I - \tau_{i+1} v_{i+1} v_{i+1}^\top)(I - Y_k T_k Y_k^\top)$$
+
+After a bit of algebra, you'll find:
+
+$$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k \end{bmatrix}$$
+</details>
+</details>
+
+> However if one wished to see a little more detail as to how the LQ / QR is actually derived
+
+_ Tl;DR Above shows merely that the triangular matrix $T$ becomes append only which performant and provides a two derivations dependent upon the readers desire for rigour_
+
+## LQ Summary
+
+### Conclusion
 
 Hopefully you can see both the intuition for how WY is derived and why I deviated from the traditional representation of QR once we consider this in the WY decomposition.
-This allows me to be able to split the triangle matrix into solved vs not solved portions which while also helping with safety features in rust b/c now we can partition where the data is changing versus where it is not
-Not only does this triangle form drastically help the memory prefetcher.
-The memory prefetcher has the householder vectors in linear order and doesn't need to jump scan every single data point.
+
+- the matrix data is in line with how its represented in newer data workflows ie Row Major and the Householder Vector
+- the triangle matrix becomes append only in row major form
+- helps to eliminate transposes at the boundary lines of the communication of applications and the historical Blas format
+- allows us to reuse decades of optimizations simply by pivoting our representation 
+
+All of these significantly help the memory prefether and help improve data locality.
+Transposing at the boundries still hurt cost and if we can eliminate 33% of processing for small matricies we should.
+
+It is important to note wrt to the metrics my matmul kernel approaches ~ 4/3rds the cost of Faer so it's not surprising to see the gains start to diminish.
+However, I believe this is because of the kernel optimizations I am missing from my library and the immense amount of optimization that has gone into optmizing the codebase Faer.
 
 I've merely obtained these gains by conjugating the QR decomposition with it's wanted row-major representation LQ.
 After doing so all of these years of optimizations are now available in the more modern row-major form.
+
+### Upcoming
+
+Unfortunately, I had much more planned for this article however this article ballooned before I got to my thin Y or trapezoidal kernels which arguably more essentially in obtaining performant results.
+
+The plan is for the following:
+
+**Part II**
+_show the SIMD trapezoidal kernels used to work around the implicit Store of Y' in the WY(LQ) and how we can use offsets and a simple FMA pattern with out kernels for direct calculation_
+
+** Part III**
+_show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking
