@@ -454,5 +454,5 @@ The plan is for the following:
 **Part II**
 _show the SIMD trapezoidal kernels used to work around the implicit Store of Y' in the WY(LQ) and how we can use offsets and a simple FMA pattern with out kernels for direct calculation_
 
-** Part III**
+**Part III**
 _show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking
