@@ -435,7 +435,7 @@ $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k
 
 > However if one wished to see a little more detail as to how the LQ / QR is actually derived
 
-_ Tl;DR Above shows merely that the triangular matrix $T$ becomes append only which performant and provides a two derivations dependent upon the readers desire for rigour_
+_Tl;DR Above shows merely that the triangular matrix $T$ becomes append only which performant and provides a two derivations dependent upon the readers desire for rigour_
 
 ## LQ Summary
 
