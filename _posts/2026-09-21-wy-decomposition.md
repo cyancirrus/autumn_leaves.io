@@ -56,10 +56,8 @@ In reality is almost better for the sake of this paper to presume that QR is exa
 Given the `QR` Decomposition we can now effectively solve systems of equations as well as drmatically reduce the amount of work as well as the error.
 The computer does not have infinite precision so it really matters how we go about manipulating numbers.
 
-QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used to drastically simplify problems, or to change their computation properties.
-QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it's constant factors for inference are near on par with SVD.
-
-QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for randomized SVD.
+QR as a decomposition is an incredibly performant way to solve a system of equations quickly, drastically simplify problems, or change a system's computation properties.
+QR is a non-iterative algorithm so it runs in deterministic time as compared to SVD and its constant factors for inference are near on par with SVD.
 
 ## WY Decomposition - Main Focus and Post Overview
 
