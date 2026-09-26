@@ -265,7 +265,19 @@ This traditionally has been the long standing interface between modern code whic
 Essentially, historically *Fortran*, these mathematical concepts were all written in column major form.
 However, nowadays, most apis and data comes in row-major form as that has been the main way that *Computer Science* (CS) has structured data and so there's been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.
 
-Even if the transpoistion can be `SIMD'd` this is still a full scan through the data which must happen 
+Even if the transposition can be `SIMD'd` this is still a full scan through the data which must happen 
+
+However, analyzing this misalignment simply in terms of our storage format changing, is a bit less genuine than recognizing that the original form stored the data with `feature` as the contiguous major axis of iteration, and that our applications moved towards `observations` becoming the primary axis.
+
+The following shows how a contiguous memory layout would appear, with each feature being an m-length vector, one for each unit of analysis ie the `observation` axis
+
+$$
+X_{feat} := \big[ feature_0 \mid feature_1 \mid \cdots \mid feature_n \big]
+$$
+
+All said and done, when solving exact systems, $A x = y$ for $x$, we can eliminate a significant amount of computation, by presuming $A$ is already within its required form with features within its rows.
+
+I will explore this point further in an unrelated post, as this becomes genuinely complex.
 
 ### WY Derivation - the importance of the Row Major Form
 
@@ -279,7 +291,7 @@ LQ, lets consider zeroing the $row_k$ we can simply consider the values, ie each
 ```
 
 
-However lets look at QR when trying to zero the column_i in row major form we would need the following data
+However let's look at QR when trying to zero the $Column_i$ in row major form we would need the following data
 ```
 [row_0..k,r0k, row_0k+1],
 [row_1..k,r1k, row_1k+1],
@@ -295,7 +307,7 @@ If we continue at the LQ form of decomposition, and if we carry this detail furt
 
 ### WY Mathematical Derivation and the Forced Lower Triangle T
 
-I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, so I thought I would provide it.
+I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, in any literature, so I thought I would provide it.
 
 _Here I am going to presume some level of fluency in linear algebra while not being mathematically complete,
 still is a meaningful gesture at the full derivation and will help provide mathematical intuition for the form of the full derivation_
@@ -413,7 +425,7 @@ $$T_1 = \begin{bmatrix} \tau_0 & 0 \\ -\tau_0 \tau_1 v_1^\top v_0 & \tau_1 \end{
 <summary><strong>5. General Recursion</strong></summary>
 To get the full recursion, consider this block form:
 
-$$Q_{i+1} = (I - \tau_{i+1} v_{i+1} v_{i+1}^\top)(I - Y_k T_k Y_k^\top)$$
+$$Q_{k+1} = (I - \tau_{k+1} v_{k+1} v_{k+1}^\top)(I - Y_k T_k Y_k^\top)$$
 
 After a bit of algebra, you'll find:
 
