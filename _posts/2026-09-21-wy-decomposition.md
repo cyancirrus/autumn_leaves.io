@@ -297,9 +297,9 @@ This allows us to process data without skips or strides.
 However let's look at the naive access pattern of QR when trying to zero the $Column_1$, within the row major form we would need all the following data because the data is not *contiguous*.
 
 ```
-    Row 0: [ a00 ][ a01* ][ a02 ][ a03 ] 
-    Row 1: [ a10 ][ a11* ][ a12 ][ a13 ]
-    Row 2: [ a20 ][ a21* ][ a22 ][ a23 ]
+    Row 0: [ a00 ][ *a01* ][ a02 ][ a03 ] 
+    Row 1: [ a10 ][ *a11* ][ a12 ][ a13 ]
+    Row 2: [ a20 ][ *a21* ][ a22 ][ a23 ]
 ```
 
 The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience see disasterous results
