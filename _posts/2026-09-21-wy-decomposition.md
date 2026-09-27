@@ -279,29 +279,44 @@ I will explore this point further in an unrelated post, as this becomes genuinel
 
 ### WY Derivation - the importance of the Row Major Form
 
-The original QR is a masterpiece however it presumes a column major format.
+The original QR is a masterpiece however when considering a square matrix format it first presumes a column major format.
+This is because the column major form inherently prioritized having the features in contiguous data slices ie
 
-One of the main benefits from the WY form is that we only need to have access to the current rows data for the householder vector in order to find it's zeros first consider the row-major representations of the following.
+$$X_{feature} = \big[ feat_0, feat_1, ..., feat_n \big]$$
 
-LQ, lets consider zeroing the $row_k$ we can simply consider the values, ie each of these are simple floats -> Order M.
+However, we eventually moved towards an implicit version where that we were in the observation space which then inherently, the way that QR expects a column major form, forces a bit of data movement, prior to even being able to begin solves.
+
+
+When considering zero-transpose representations, one of the main benefits from the WY form is that we only need to need access to the current rows data for the householder vector.
+
+When we consider the row major represntation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $Order \big[ Order M \big]$.
+
+$$\begin{bmatrix} r_k0 & r_k1 & r_k2 & r_k3 \end{bmatrix}$$
+
+This allows us to process data without skips or strides.
+However let's look at the naive access pattern of QR when trying to zero the $Column_1$, within the row major form we would need all the following data because the data is not *contiguous*.
+
 ```
-[rk0, ..., rkn];
+    Row 0: [ a00 ][ a01* ][ a02 ][ a03 ] 
+    Row 1: [ a10 ][ a11* ][ a12 ][ a13 ]
+    Row 2: [ a20 ][ a21* ][ a22 ][ a23 ]
 ```
 
+The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience see disasterous results
 
-However let's look at QR when trying to zero the $Column_i$ in row major form we would need the following data
-```
-[row_0..k,r0k, row_0k+1],
-[row_1..k,r1k, row_1k+1],
-[      ...             ],
-[row_m..k, r_mk, ...   ],
-```
-requiring nearly the entire matrix! -> Order M x N.
+$$\begin{bmatrix} a00 & a01* & a02 & a03 & a10 & a11* & a12 & a13 & a20 & a21* & a22 & a23\end{bmatrix}$$
 
-While the memory prefetcher is genius this genuinely thrashes the cache significantly if we represent the data in row major form.
-This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form.
+The wrong format with the wrong conjugation requires nearly the entire matrix to fit within the small working memory the cpu's cache!
+In fact the amount of memory required is of $Order \big[ M x N\big]$ !
 
-If we continue at the LQ form of decomposition, and if we carry this detail further we can see that our triangle update becomes
+While the memory prefetcher is genius, this will significantly thrash the cache of the CPU if we represent the data for `QR` in `Row Major Form`.
+This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form, in addition to transposing from `observation` space to `feature` space.
+
+The L1 cache can only hold so much data, and there's a pipeline of memory from static <-> ram <-> l3 <-> l2 <-> l1.
+Every single step in the process chain where memory communicates with another layer is another magnitude order of cost... imagine we need to load the entire matrix into memory merely to scan a single column.
+
+Thankfully, when considering the square solve, if presume that our memory is already within it's `feature` representation, we can unlock the core performance of the `QR` within it's original representation - and perhaps more.
+This prevents us from needing logical stride patterns and unoptimized memory communication overhead.
 
 ### WY Mathematical Derivation and the Forced Lower Triangle T
 
