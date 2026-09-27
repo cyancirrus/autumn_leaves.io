@@ -312,7 +312,7 @@ In fact the amount of memory required is of $Order \big[ M x N\big]$ !
 While the memory prefetcher is genius, this will significantly thrash the cache of the CPU if we represent the data for `QR` in `Row Major Form`.
 This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form, in addition to transposing from `observation` space to `feature` space.
 
-The L1 cache can only hold so much data, and there's a pipeline of memory from static <-> ram <-> l3 <-> l2 <-> l1.
+The L1 cache can only hold so much data, and there's a pipeline of memory from $\text{RAM} \iff \text{L3} \iff \text{L2} \iff \text{L1}$.
 Every single step in the process chain where memory communicates with another layer is another magnitude order of cost... imagine we need to load the entire matrix into memory merely to scan a single column.
 
 Thankfully, when considering the square solve, if presume that our memory is already within it's `feature` representation, we can unlock the core performance of the `QR` within it's original representation - and perhaps more.
