@@ -11,7 +11,6 @@ tags: [rust, planning, perception, action, learning]
 - [Benchmark Script](https://github.com/cyancirrus/stellar-math/blob/main/scripts/lq_decomposition.sh)
 
 # WORK IN PROGRESS ARTICLE
-## TODO: Finish article and then split out into the sections into articles and functionally add article type filters
 
 ## QR Decomposition
 
@@ -67,8 +66,13 @@ In the coming sections, We will first hit the glossary as a reference point for 
 - Explore the derivation for WY and show a more optimal representation of T for row major form
 
 Promise this will be worth it here are my results against Rust's most respected numerical library
-**TODO: change this link to of my benchmark results for small matrices**
-![Benchmark Results WY Decomposition](./assets/wy_benchmark_results.png) 
+
+| Matrix Size ($N$) | Autumn LQ Solve | Faer QR Solve | Autumn LQ Decomposition | Faer QR Decomposition |
+| :---: | :---: | :---: | :---: | :---: |
+| **8** | 1.100 µs | 1.397 µs | 1.391 µs | 1.895 µs |
+| **16** | 2.975 µs | 4.509 µs | 5.346 µs | 5.434 µs |
+| **32** | 9.067 µs | 14.026 µs | 27.031 µs | 25.767 µs |
+| **64** | 43.419 µs | 47.305 µs | 155.770 µs | 101.690 µs |
 
 ## Base Primitives Needed for WY
 
@@ -445,6 +449,92 @@ After a bit of algebra, you'll find:
 $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k \end{bmatrix}$$
 </details>
 </details>
+
+
+<details markdown="1">
+<summary><strong>Rigourous Derivation </strong></summary>
+
+ We've shown from Semirigour-Derivation above
+ Q_0 = (I - Y_0 T_0 Y_0');
+ =>
+ Q_1 = (I - Y_1 T_1 Y_1');
+
+In order to complete our mathematatical induction for finite algorithmic termination we need to show that
+> given $Y_k T_k Y_k' \implies Y_{k+1} T_{k+1} Y_{k+1}'$
+
+By construction the following:
+
+$w_k \triangleq householder_k$
+
+$w_k$ is the vector which zero's the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k')$
+
+$$Y_{k+1} = \begin{matrix} Y_k & w_k \end{bmatrix}$$
+
+$$Y_{k+1} = \begin{matrix} Y_k' \\ w_k' \end{bmatrix}$$
+
+$$T_{k+1} = \begin{matrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
+
+_l for left, r for right_
+
+$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}' )(I - T_k Y_k T_k')$$
+
+$$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' \big]$$
+
+$\implies$
+
+$$ Y_{k+1} T_{k+1} Y_{k+1}' = \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' $$
+
+by construction
+
+$$ Y_{k+1} T_{k+1} Y_{k+1}' = \begin {matrix} \begin{matrix} Y_k & w_k \end{bmatrix} \begin{matrix} Y_k' \\ w_k' \end{bmatrix} \begin{matrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
+
+multiplying this all out we get
+
+$$Y_{k+1} T_{k+1} Y_k_{k+1}' = Y_k T_k Y_k' + w_{k+1} t_{k+1, l} Y_k' + w_{k+1} t_{k+1, r} w_{k+1}'$$
+
+recall our previous form
+
+$$ Y_{k+1} T_{k+1} Y_{k+1}' = \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' $$
+
+similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which
+
+$\implies$ 
+
+$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}' Y_k T_k$$
+$$ t_{k+1, r) = \tau_{k+1}$$
+
+
+therefore our derived matrix $T_k$ appears as
+
+$$T_{k+1} = \begin{matrix} T_k & 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k, \tau_{k+1} \end{matrix}$$
+
+by showing the following
+$Q_0 \implies Q_1$
+$Q_k \implies Q_{k+1}$
+
+while maintainging our forms for $Y ~ concatenation of householder vectors$, $T ~ Lower triangular$ 
+
+we have shown that $WY(LQ)$ is as above and will have finite termination in the amount of rows steps
+and gesturing towards the definition of the householder that it's a rotation and a product of rotations is a rotation ie
+
+let $Q_k$ be a rotation
+$$ Q_\omega = Q_n * Q_1 \elipses Q_0 $$
+=>
+$$ Q_\omega^{-1} = Q_'$$
+
+so we're doing something as the following 
+$$ A Q_\omega' Q_\omega = A$$
+
+via householder and the zeroings of that form
+$$ L \triangleq (A Q_\omega') $$
+
+$$ Q_\omega = (I - Y T Y') $$
+
+$\therefore$
+$$ A = L ( I - Y T Y') $$
+
+Finally this completes our mathematical induction for our algorithm and that the form is valid for a decomposition and that the algorithm achieves finite termination.
+</details markdown="1">
 
 > However if one wished to see a little more detail as to how the LQ / QR is actually derived
 
