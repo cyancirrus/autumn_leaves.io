@@ -27,7 +27,6 @@
 </ul>
 
 <h1 id="work-in-progress-article">WORK IN PROGRESS ARTICLE</h1>
-<h2 id="todo-finish-article-and-then-split-out-into-the-sections-into-articles-and-functionally-add-article-type-filters">TODO: Finish article and then split out into the sections into articles and functionally add article type filters</h2>
 
 <h2 id="qr-decomposition">QR Decomposition</h2>
 
@@ -66,10 +65,8 @@ Remembering $\hat{Y}$ is <em>almost never</em> near-exact unlike QR’s $\epsilo
 <p>Given the <code class="language-plaintext highlighter-rouge">QR</code> Decomposition we can now effectively solve systems of equations as well as drmatically reduce the amount of work as well as the error.
 The computer does not have infinite precision so it really matters how we go about manipulating numbers.</p>
 
-<p>QR as a decomposition is just super handy as a way to solve a system of equations quickly, and can be used to drastically simplify problems, or to change their computation properties.
-QR is a non-iterative algorithm so it runs in detiministic time as compared to SVD and it’s constant factors for inference are near on par with SVD.</p>
-
-<p>QR is one of the major tool for any industry which uses mathematics as a vehicle for insights or information, signal processing, downscaling for randomized SVD.</p>
+<p>QR as a decomposition is an incredibly performant way to solve a system of equations quickly, drastically simplify problems, or change a system’s computation properties.
+QR is a non-iterative algorithm so it runs in deterministic time as compared to SVD and its constant factors for inference are near on par with SVD.</p>
 
 <h2 id="wy-decomposition---main-focus-and-post-overview">WY Decomposition - Main Focus and Post Overview</h2>
 
@@ -80,9 +77,49 @@ QR is a non-iterative algorithm so it runs in detiministic time as compared to S
   <li>Explore the derivation for WY and show a more optimal representation of T for row major form</li>
 </ul>
 
-<p>Promise this will be worth it here are my results against Rust’s most respected numerical library
-<strong>TODO: change this link to of my benchmark results for small matrices</strong>
-<img src="./assets/wy_benchmark_results.png" alt="Benchmark Results WY Decomposition" /></p>
+<p>Promise this will be worth it here are my results against Rust’s most respected numerical library</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">Matrix Size N</th>
+      <th style="text-align: center">Autumn LQ Solve</th>
+      <th style="text-align: center">Faer QR Solve</th>
+      <th style="text-align: center">Autumn LQ Decomposition</th>
+      <th style="text-align: center">Faer QR Decomposition</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center"><strong>8</strong></td>
+      <td style="text-align: center">1.100 µs</td>
+      <td style="text-align: center">1.397 µs</td>
+      <td style="text-align: center">1.391 µs</td>
+      <td style="text-align: center">1.895 µs</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><strong>16</strong></td>
+      <td style="text-align: center">2.975 µs</td>
+      <td style="text-align: center">4.509 µs</td>
+      <td style="text-align: center">5.346 µs</td>
+      <td style="text-align: center">5.434 µs</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><strong>32</strong></td>
+      <td style="text-align: center">9.067 µs</td>
+      <td style="text-align: center">14.026 µs</td>
+      <td style="text-align: center">27.031 µs</td>
+      <td style="text-align: center">25.767 µs</td>
+    </tr>
+    <tr>
+      <td style="text-align: center"><strong>64</strong></td>
+      <td style="text-align: center">43.419 µs</td>
+      <td style="text-align: center">47.305 µs</td>
+      <td style="text-align: center">155.770 µs</td>
+      <td style="text-align: center">101.690 µs</td>
+    </tr>
+  </tbody>
+</table>
 
 <h2 id="base-primitives-needed-for-wy">Base Primitives Needed for WY</h2>
 
@@ -279,40 +316,98 @@ print!("cm: {rm:?}");
 &gt;&gt; rm: [0, 2, 1, 3];
 </code></pre>
 <p>These both refer to the <em>same</em> matrix, they are just <em>different perspectives</em> on how one would represent and subsequently process said data.
-If you stare hard enough you can see that the <code class="language-plaintext highlighter-rouge">transpose</code> is the implicit connection between the two.
-This traditionally has been the long standing interface between modern code which now represents data as <code class="language-plaintext highlighter-rouge">row major</code> and the <code class="language-plaintext highlighter-rouge">Blas</code> style kernels.</p>
+The <code class="language-plaintext highlighter-rouge">matrix transpose</code> is the implicit bridge between the two forms.</p>
 
-<p>Essentially, historically <em>Fortran</em>, these mathematical concepts were all written in column major form.
-However, nowadays, most apis and data comes in row-major form as that has been the main way that <em>Computer Science</em> (CS) has structured data and so there’s been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.</p>
+<p>This boundary traditionally has been the long standing interface between modern code which now represents data as <code class="language-plaintext highlighter-rouge">row major</code> and the <code class="language-plaintext highlighter-rouge">Blas</code> style kernels.</p>
 
-<p>Even if the transpoistion can be <code class="language-plaintext highlighter-rouge">SIMD'd</code> this is still a full scan through the data which must happen</p>
+<p>Historically,<em>Fortran</em>’s mathematical concepts were all written in column major form.
+However, nowadays, most apis and data comes in row-major form as that has been the main way that <em>Computer Science</em> (CS) has structured data.</p>
+
+<p>Because of the embaressingly parallel nature of working with data within <code class="language-plaintext highlighter-rouge">observation</code> form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as <code class="language-plaintext highlighter-rouge">row major</code>.</p>
+
+<p>For square matricies one can chose the representation directly and can eliminate a couple of needed transposes for the solving based solution versus if one were to use the QR form.</p>
+
+<p>While at first glance this seems a bit unfare to merely test squares, one of $LQ$ / $QR$ features is to provide exact solutions for strictly square systems.
+Essentially, there’s been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.</p>
+
+<h3 id="modern-row-major-data-representation---observation-contiguous">Modern Row Major Data Representation - Observation-Contiguous</h3>
+
+<p>Analyzing this misalignment simply in terms of our storage format changing between <code class="language-plaintext highlighter-rouge">row major</code> vs <code class="language-plaintext highlighter-rouge">column major</code> buries the real archetectural issue:</p>
+
+<p><em>What does the coniguous dimension represent?</em></p>
+
+<p>Historically, the blas reprsentation consumed data where each<code class="language-plaintext highlighter-rouge">feature</code> itself being contiguous and itself represented a column within the mathematics.
+Eventually our applications moved towards <code class="language-plaintext highlighter-rouge">observations</code> becoming the primary axis as this presented many opportunities for parallelization.</p>
+
+<ul>
+  <li><strong>Historical Column-Major Blas (Feature Contiguous)</strong></li>
+</ul>
+
+\[X_{feat} := \begin{bmatrix} feature_0 \big| feature_1 \big| \dots \big| feature_n \end{bmatrix}\]
+
+<p>Data is contiguous along features. Observations require strided access across columns</p>
+
+<ul>
+  <li><strong>Modern Row-Major Row Major Dataets (Observation Contiguous)</strong></li>
+</ul>
+
+\[X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bmatrix}\]
+
+<p>Data is contiguous along observations. Features require strided access across rows</p>
+
+<p>If we examine however one of the most common use-cases for <code class="language-plaintext highlighter-rouge">LQ</code>/<code class="language-plaintext highlighter-rouge">QR</code> ie solving an exact system $A x = y$ for $x$ then we have additional knowledge.
+<em>Our matrix is square</em></p>
+
+<p>Given that the data matrix iteself is a <code class="language-plaintext highlighter-rouge">Square Matrix</code>, this presents with a unique opportunity - we can chose if the contiguous axis itself represents a <code class="language-plaintext highlighter-rouge">feature</code> or if it reprsents an <code class="language-plaintext highlighter-rouge">observation</code>.
+We are presented here with a unique opportunity, if we chose that we are already in <code class="language-plaintext highlighter-rouge">feature</code> land for the square matrix (even if we are truly in <code class="language-plaintext highlighter-rouge">observation</code>) we will find equivalent solutions.</p>
+
+<p>The solution I explored was simply to do just this as the choice is ours.
+If one was to look at the algebra, essentially if one were to find what would it look like if we used the optimized <code class="language-plaintext highlighter-rouge">WY(QR)</code> but within this land one would find that one is looking directly at <code class="language-plaintext highlighter-rouge">WY(LQ)</code>.</p>
+
+<p><em>I will explore this further in a follow-up post detailing exactly why someone gets <code class="language-plaintext highlighter-rouge">LQ</code> and demonstraight a lightweight algebra that one can use to model when switching representational forms.</em></p>
 
 <h3 id="wy-derivation---the-importance-of-the-row-major-form">WY Derivation - the importance of the Row Major Form</h3>
 
-<p>The original QR is a masterpiece however it presumes a column major format.</p>
+<p>The original QR is a masterpiece however when considering a square matrix format it first presumes a column major format.
+This is because the column major form inherently prioritized having the features in contiguous data slices ie</p>
 
-<p>One of the main benefits from the WY form is that we only need to have access to the current rows data for the householder vector in order to find it’s zeros first consider the row-major representations of the following.</p>
+\[X_{feature} = \big[ feat_0, feat_1, ..., feat_n \big]\]
 
-<p>LQ, lets consider zeroing the $row_k$ we can simply consider the values, ie each of these are simple floats -&gt; Order M.</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[rk0, ..., rkn];
+<p>However, we eventually moved towards an implicit version where that we were in the observation space which then inherently, the way that QR expects a column major form, forces a bit of data movement, prior to even being able to begin solves.</p>
+
+<p>When considering zero-transpose representations, one of the main benefits from the WY form is that we only need to need access to the current rows data for the householder vector.</p>
+
+<p>When we consider the row major represntation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $\mathbf{Order} \big[ M \big]$. The data simply would become $\begin{bmatrix} r_{k0} &amp; r_{k1} &amp; r_{k2} &amp; r_{k3} \end{bmatrix}$.</p>
+
+<p>This allows us to process data without skips or strides.
+However let’s look at the traditional access pattern of QR when trying to zero the $Column_1$, within the row major form where we would need all the following data because the form is not <em>feature contiguous</em>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    Row 0: [ a00 ][ *a01* ][ a02 ][ a03 ] 
+    Row 1: [ a10 ][ *a11* ][ a12 ][ a13 ]
+    Row 2: [ a20 ][ *a21* ][ a22 ][ a23 ]
 </code></pre></div></div>
 
-<p>However lets look at QR when trying to zero the column_i in row major form we would need the following data</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[row_0..k,r0k, row_0k+1],
-[row_1..k,r1k, row_1k+1],
-[      ...             ],
-[row_m..k, r_mk, ...   ],
-</code></pre></div></div>
-<p>requiring nearly the entire matrix! -&gt; Order M x N.</p>
+<p>The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience disasterous results</p>
 
-<p>While the memory prefetcher is genius this genuinely thrashes the cache significantly if we represent the data in row major form.
-This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form.</p>
+\[\begin{bmatrix} a00 &amp; \mathbf{a01} &amp; a02 &amp; a03 &amp; a10 &amp; \mathbf{a11} &amp; a12 &amp; a13 &amp; a20 &amp; \mathbf{a21} &amp; a22 &amp; a23\end{bmatrix}\]
 
-<p>If we continue at the LQ form of decomposition, and if we carry this detail further we can see that our triangle update becomes</p>
+<p>The wrong format with the wrong conjugation requires nearly the entire matrix to fit within the small working memory the cpu’s cache!
+In fact the amount of memory required is of $\mathbf{Order} \big[ M x N\big]$ !</p>
+
+<p>While the memory prefetcher is genius, this will significantly thrash the cache of the CPU if we represent the data for <code class="language-plaintext highlighter-rouge">QR</code> in <code class="language-plaintext highlighter-rouge">Row Major Form</code>.
+This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form.
+In addition this also transposes the representation from <code class="language-plaintext highlighter-rouge">observation</code> space to <code class="language-plaintext highlighter-rouge">feature</code> space.</p>
+
+<p>The L1 cache can only hold so much data, and there’s a pipeline of memory from $\text{RAM} \iff \text{L3} \iff \text{L2} \iff \text{L1}$.</p>
+
+<p>Every single step in the process chain where memory communicates with another layer requires another magnitude order of cost… imagine - we need to effectively load the entire matrix into memory merely to scan a single column.</p>
+
+<p>Thankfully, when considering the square solve, if presume that our memory is already within it’s <code class="language-plaintext highlighter-rouge">feature</code> representation, we can unlock the core performance of the <code class="language-plaintext highlighter-rouge">QR</code> within it’s original representation - and perhaps more.
+This prevents us from needing logical stride patterns and unoptimized memory communication overhead.</p>
 
 <h3 id="wy-mathematical-derivation-and-the-forced-lower-triangle-t">WY Mathematical Derivation and the Forced Lower Triangle T</h3>
 
-<p>I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, so I thought I would provide it.</p>
+<p>I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, in any literature, so I thought I would provide it.</p>
 
 <p><em>Here I am going to presume some level of fluency in linear algebra while not being mathematically complete,
 still is a meaningful gesture at the full derivation and will help provide mathematical intuition for the form of the full derivation</em></p>
@@ -435,7 +530,7 @@ $LQ = L(I - Y L Y^\top)$</p>
     <summary><strong>5. General Recursion</strong></summary>
     <p>To get the full recursion, consider this block form:</p>
 
-\[Q_{i+1} = (I - \tau_{i+1} v_{i+1} v_{i+1}^\top)(I - Y_k T_k Y_k^\top)\]
+\[Q_{k+1} = (I - \tau_{k+1} v_{k+1} v_{k+1}^\top)(I - Y_k T_k Y_k^\top)\]
 
     <p>After a bit of algebra, you’ll find:</p>
 
@@ -443,11 +538,102 @@ $LQ = L(I - Y L Y^\top)$</p>
   </details>
 </details>
 
+<details>
+  <summary><strong>Rigourous Derivation </strong></summary>
+
+  <p>Shown from the Semirigour-Derivation above:
+ $Q_0 = (I - Y_0 T_0 Y_0^\top)$
+ =&gt;
+ $Q_1 = (I - Y_1 T_1 Y_1^\top)$</p>
+
+  <p>In order to complete our mathematatical induction for finite algorithmic termination we need to show that</p>
+  <blockquote>
+    <p>given $Y_k T_k Y_k^\top \implies Y_{k+1} T_{k+1} Y_{k+1}^\top$</p>
+  </blockquote>
+
+  <p>By construction the following:</p>
+
+  <p>$w_k \triangleq householder_k$</p>
+
+  <p>$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k^\top)$</p>
+
+\[Y_{k+1} = \begin{bmatrix} Y_k &amp; w_k\end{bmatrix}\]
+
+\[Y_{k+1} = \begin{bmatrix} Y_k^\top \\ w_k^\top\end{bmatrix}\]
+
+\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\ t_{k+1, l} &amp; t_{k+1, r}\end{bmatrix}\]
+
+  <p><em>l for left, r for right</em></p>
+
+\[Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - T_k Y_k T_k^\top)\]
+
+\[Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]\]
+
+  <p>$\implies$</p>
+
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
+
+  <p>by construction</p>
+
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k &amp; w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k &amp; 0 \\ t_{k+1, l} &amp; t_{k+1, r} \end{bmatrix}\]
+
+  <p>multiplying this all out we get</p>
+
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = Y_k T_k Y_k^\top + w_{k+1} t_{k+1, l} Y_k^\top + w_{k+1} t_{k+1, r} w_{k+1}^\top\]
+
+  <p>recall our previous form</p>
+
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
+
+  <p>similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which</p>
+
+  <p>$\implies$</p>
+
+  <p>\(t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k\)
+\(t_{k+1, r) = \tau_{k+1}\)</p>
+
+  <p>therefore our derived matrix $T_k$ appears as</p>
+
+\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
+
+  <p>by showing the following
+$Q_0 \implies Q_1$
+$Q_k \implies Q_{k+1}$</p>
+
+  <p>while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$</p>
+
+  <p>we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
+and gesturing towards the definition of the householder that it’s a rotation and a product of rotations is itself a rotation ie</p>
+
+  <p>let $Q_k$ be a rotation
+\(Q_\omega = Q_n * Q_1 \dots Q_0\)
+=&gt;
+\(Q_\omega^{-1} = Q_\omega^\top\)</p>
+
+  <p>so we’re doing something as the following</p>
+
+\[A Q_n^\top Q_{n-1}^\top ... Q_0^\top Q0^\top Q1^\top... Q_n^\top\]
+
+\[A Q_\omega^\top Q_\omega = A\]
+
+  <p>via householder and the zeroings of that form
+\(L \triangleq (A Q_\omega^\top)\)</p>
+
+\[Q_\omega = (I - Y T Y^\top)\]
+
+\[\therefore\]
+
+\[A = L ( I - Y T Y^\top)\]
+
+  <p>Finally this completes our mathematical induction for our algorithm and that the form is valid for a decomposition and that the algorithm achieves finite termination.</p>
+
+</details>
+
 <blockquote>
   <p>However if one wished to see a little more detail as to how the LQ / QR is actually derived</p>
 </blockquote>
 
-<p>_ Tl;DR Above shows merely that the triangular matrix $T$ becomes append only which performant and provides a two derivations dependent upon the readers desire for rigour_</p>
+<p><em>Tl;DR Above shows merely that the triangular matrix $T$ becomes append only which performant and provides a two derivations dependent upon the readers desire for rigour</em></p>
 
 <h2 id="lq-summary">LQ Summary</h2>
 
@@ -480,8 +666,8 @@ After doing so all of these years of optimizations are now available in the more
 <p><strong>Part II</strong>
 <em>show the SIMD trapezoidal kernels used to work around the implicit Store of Y’ in the WY(LQ) and how we can use offsets and a simple FMA pattern with out kernels for direct calculation</em></p>
 
-<p>** Part III**
-_show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking</p>
+<p><strong>Part III</strong>
+<em>show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking</em></p>
 
     </div>
   </div>

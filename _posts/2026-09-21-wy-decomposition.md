@@ -67,7 +67,7 @@ In the coming sections, We will first hit the glossary as a reference point for 
 
 Promise this will be worth it here are my results against Rust's most respected numerical library
 
-| Matrix Size ($N$) | Autumn LQ Solve | Faer QR Solve | Autumn LQ Decomposition | Faer QR Decomposition |
+| Matrix Size N | Autumn LQ Solve | Faer QR Solve | Autumn LQ Decomposition | Faer QR Decomposition |
 | :---: | :---: | :---: | :---: | :---: |
 | **8** | 1.100 µs | 1.397 µs | 1.391 µs | 1.895 µs |
 | **16** | 2.975 µs | 4.509 µs | 5.346 µs | 5.434 µs |
@@ -261,25 +261,52 @@ print!("cm: {rm:?}");
 >> rm: [0, 2, 1, 3];
 ```
 These both refer to the _same_ matrix, they are just _different perspectives_ on how one would represent and subsequently process said data.
-If you stare hard enough you can see that the `transpose` is the implicit connection between the two.
-This traditionally has been the long standing interface between modern code which now represents data as `row major` and the `Blas` style kernels.
+The `matrix transpose` is the implicit bridge between the two forms.
 
-Essentially, historically *Fortran*, these mathematical concepts were all written in column major form.
-However, nowadays, most apis and data comes in row-major form as that has been the main way that *Computer Science* (CS) has structured data and so there's been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.
+This boundary traditionally has been the long standing interface between modern code which now represents data as `row major` and the `Blas` style kernels.
 
-Even if the transposition can be `SIMD'd` this is still a full scan through the data which must happen 
+Historically,*Fortran*'s mathematical concepts were all written in column major form.
+However, nowadays, most apis and data comes in row-major form as that has been the main way that *Computer Science* (CS) has structured data.
 
-However, analyzing this misalignment simply in terms of our storage format changing, is a bit less genuine than recognizing that the original form stored the data with `feature` as the contiguous major axis of iteration, and that our applications moved towards `observations` becoming the primary axis.
+Because of the embaressingly parallel nature of working with data within `observation` form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as `row major`.
 
-The following shows how a contiguous memory layout would appear, with each feature being an m-length vector, one for each unit of analysis ie the `observation` axis
+For square matricies one can chose the representation directly and can eliminate a couple of needed transposes for the solving based solution versus if one were to use the QR form.
 
-$$
-X_{feat} := \big[ feature_0 \mid feature_1 \mid \cdots \mid feature_n \big]
-$$
+While at first glance this seems a bit unfare to merely test squares, one of $LQ$ / $QR$ features is to provide exact solutions for strictly square systems.
+Essentially, there's been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.
 
-All said and done, when solving exact systems, $A x = y$ for $x$, we can eliminate a significant amount of computation, by presuming $A$ is already within its required form with features within its rows.
+### Modern Row Major Data Representation - Observation-Contiguous
 
-I will explore this point further in an unrelated post, as this becomes genuinely complex.
+Analyzing this misalignment simply in terms of our storage format changing between `row major` vs `column major` buries the real archetectural issue:
+
+_What does the coniguous dimension represent?_
+
+Historically, the blas reprsentation consumed data where each`feature` itself being contiguous and itself represented a column within the mathematics.
+Eventually our applications moved towards `observations` becoming the primary axis as this presented many opportunities for parallelization.
+
+* **Historical Column-Major Blas (Feature Contiguous)**
+
+$$ X_{feat} := \begin{bmatrix} feature_0 \big| feature_1 \big| \dots \big| feature_n \end{bmatrix}$$
+
+  Data is contiguous along features. Observations require strided access across columns
+
+* **Modern Row-Major Row Major Dataets (Observation Contiguous)**
+
+$$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bmatrix} $$
+
+  Data is contiguous along observations. Features require strided access across rows
+
+
+If we examine however one of the most common use-cases for `LQ`/`QR` ie solving an exact system $A x = y$ for $x$ then we have additional knowledge.
+_Our matrix is square_
+
+Given that the data matrix iteself is a `Square Matrix`, this presents with a unique opportunity - we can chose if the contiguous axis itself represents a `feature` or if it reprsents an `observation`.
+We are presented here with a unique opportunity, if we chose that we are already in `feature` land for the square matrix (even if we are truly in `observation`) we will find equivalent solutions.
+
+The solution I explored was simply to do just this as the choice is ours.
+If one was to look at the algebra, essentially if one were to find what would it look like if we used the optimized `WY(QR)` but within this land one would find that one is looking directly at `WY(LQ)`.
+
+_I will explore this further in a follow-up post detailing exactly why someone gets `LQ` and demonstraight a lightweight algebra that one can use to model when switching representational forms._
 
 ### WY Derivation - the importance of the Row Major Form
 
@@ -293,12 +320,10 @@ However, we eventually moved towards an implicit version where that we were in t
 
 When considering zero-transpose representations, one of the main benefits from the WY form is that we only need to need access to the current rows data for the householder vector.
 
-When we consider the row major represntation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $Order \big[ Order M \big]$.
-
-$$\begin{bmatrix} r_k0 & r_k1 & r_k2 & r_k3 \end{bmatrix}$$
+When we consider the row major represntation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $\mathbf{Order} \big[ M \big]$. The data simply would become $\begin{bmatrix} r_{k0} & r_{k1} & r_{k2} & r_{k3} \end{bmatrix}$.
 
 This allows us to process data without skips or strides.
-However let's look at the naive access pattern of QR when trying to zero the $Column_1$, within the row major form we would need all the following data because the data is not *contiguous*.
+However let's look at the traditional access pattern of QR when trying to zero the $Column_1$, within the row major form where we would need all the following data because the form is not *feature contiguous*.
 
 ```
     Row 0: [ a00 ][ *a01* ][ a02 ][ a03 ] 
@@ -306,18 +331,20 @@ However let's look at the naive access pattern of QR when trying to zero the $Co
     Row 2: [ a20 ][ *a21* ][ a22 ][ a23 ]
 ```
 
-The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience see disasterous results
+The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience disasterous results
 
-$$\begin{bmatrix} a00 & a01* & a02 & a03 & a10 & a11* & a12 & a13 & a20 & a21* & a22 & a23\end{bmatrix}$$
+$$\begin{bmatrix} a00 & \mathbf{a01} & a02 & a03 & a10 & \mathbf{a11} & a12 & a13 & a20 & \mathbf{a21} & a22 & a23\end{bmatrix}$$
 
 The wrong format with the wrong conjugation requires nearly the entire matrix to fit within the small working memory the cpu's cache!
-In fact the amount of memory required is of $Order \big[ M x N\big]$ !
+In fact the amount of memory required is of $\mathbf{Order} \big[ M x N\big]$ !
 
 While the memory prefetcher is genius, this will significantly thrash the cache of the CPU if we represent the data for `QR` in `Row Major Form`.
-This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form, in addition to transposing from `observation` space to `feature` space.
+This is why most libraries will transpose their data prior to using the QR decomposition so that it is in column major form.
+In addition this also transposes the representation from `observation` space to `feature` space.
 
 The L1 cache can only hold so much data, and there's a pipeline of memory from $\text{RAM} \iff \text{L3} \iff \text{L2} \iff \text{L1}$.
-Every single step in the process chain where memory communicates with another layer is another magnitude order of cost... imagine we need to load the entire matrix into memory merely to scan a single column.
+
+Every single step in the process chain where memory communicates with another layer requires another magnitude order of cost... imagine - we need to effectively load the entire matrix into memory merely to scan a single column.
 
 Thankfully, when considering the square solve, if presume that our memory is already within it's `feature` representation, we can unlock the core performance of the `QR` within it's original representation - and perhaps more.
 This prevents us from needing logical stride patterns and unoptimized memory communication overhead.
@@ -454,87 +481,93 @@ $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k
 <details markdown="1">
 <summary><strong>Rigourous Derivation </strong></summary>
 
- We've shown from Semirigour-Derivation above
- Q_0 = (I - Y_0 T_0 Y_0');
+ Shown from the Semirigour-Derivation above:
+ $Q_0 = (I - Y_0 T_0 Y_0^\top)$
  =>
- Q_1 = (I - Y_1 T_1 Y_1');
+ $Q_1 = (I - Y_1 T_1 Y_1^\top)$
 
 In order to complete our mathematatical induction for finite algorithmic termination we need to show that
-> given $Y_k T_k Y_k' \implies Y_{k+1} T_{k+1} Y_{k+1}'$
+> given $Y_k T_k Y_k^\top \implies Y_{k+1} T_{k+1} Y_{k+1}^\top$
 
 By construction the following:
 
 $w_k \triangleq householder_k$
 
-$w_k$ is the vector which zero's the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k')$
+$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k^\top)$
 
-$$Y_{k+1} = \begin{matrix} Y_k & w_k \end{bmatrix}$$
+$$Y_{k+1} = \begin{bmatrix} Y_k & w_k\end{bmatrix}$$
 
-$$Y_{k+1} = \begin{matrix} Y_k' \\ w_k' \end{bmatrix}$$
+$$Y_{k+1} = \begin{bmatrix} Y_k^\top \\ w_k^\top\end{bmatrix}$$
 
-$$T_{k+1} = \begin{matrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r}\end{bmatrix}$$
 
 _l for left, r for right_
 
-$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}' )(I - T_k Y_k T_k')$$
+$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - T_k Y_k T_k^\top)$$
 
-$$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' \big]$$
+$$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]$$
 
 $\implies$
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}' = \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' $$
+$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
 
 by construction
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}' = \begin {matrix} \begin{matrix} Y_k & w_k \end{bmatrix} \begin{matrix} Y_k' \\ w_k' \end{bmatrix} \begin{matrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
+$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k & w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
 
 multiplying this all out we get
 
-$$Y_{k+1} T_{k+1} Y_k_{k+1}' = Y_k T_k Y_k' + w_{k+1} t_{k+1, l} Y_k' + w_{k+1} t_{k+1, r} w_{k+1}'$$
+$$Y_{k+1} T_{k+1} Y_{k+1}^\top = Y_k T_k Y_k^\top + w_{k+1} t_{k+1, l} Y_k^\top + w_{k+1} t_{k+1, r} w_{k+1}^\top$$
 
 recall our previous form
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}' = \tau_{k+1} w_{k+1} + Y_k T_k Y_k' - \tau_{k+1} w_{k+1} w_{k+1}' Y_k T_k Y_k' $$
+$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
 
 similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which
 
 $\implies$ 
 
-$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}' Y_k T_k$$
+$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k$$
 $$ t_{k+1, r) = \tau_{k+1}$$
 
 
 therefore our derived matrix $T_k$ appears as
 
-$$T_{k+1} = \begin{matrix} T_k & 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k, \tau_{k+1} \end{matrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k & \tau_{k+1} \end{bmatrix}$$
 
 by showing the following
 $Q_0 \implies Q_1$
 $Q_k \implies Q_{k+1}$
 
-while maintainging our forms for $Y ~ concatenation of householder vectors$, $T ~ Lower triangular$ 
+while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$
 
-we have shown that $WY(LQ)$ is as above and will have finite termination in the amount of rows steps
-and gesturing towards the definition of the householder that it's a rotation and a product of rotations is a rotation ie
+we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
+and gesturing towards the definition of the householder that it's a rotation and a product of rotations is itself a rotation ie
 
 let $Q_k$ be a rotation
-$$ Q_\omega = Q_n * Q_1 \elipses Q_0 $$
+$$ Q_\omega = Q_n * Q_1 \dots Q_0 $$
 =>
-$$ Q_\omega^{-1} = Q_'$$
+$$ Q_\omega^{-1} = Q_\omega^\top$$
 
 so we're doing something as the following 
-$$ A Q_\omega' Q_\omega = A$$
+
+$$ A Q_n^\top Q_{n-1}^\top ... Q_0^\top Q0^\top Q1^\top... Q_n^\top$$
+
+$$ A Q_\omega^\top Q_\omega = A$$
 
 via householder and the zeroings of that form
-$$ L \triangleq (A Q_\omega') $$
+$$ L \triangleq (A Q_\omega^\top) $$
 
-$$ Q_\omega = (I - Y T Y') $$
+$$ Q_\omega = (I - Y T Y^\top) $$
 
-$\therefore$
-$$ A = L ( I - Y T Y') $$
+$$\therefore$$
+
+$$ A = L ( I - Y T Y^\top) $$
 
 Finally this completes our mathematical induction for our algorithm and that the form is valid for a decomposition and that the algorithm achieves finite termination.
-</details markdown="1">
+
+</details>
+
 
 > However if one wished to see a little more detail as to how the LQ / QR is actually derived
 
@@ -570,4 +603,4 @@ The plan is for the following:
 _show the SIMD trapezoidal kernels used to work around the implicit Store of Y' in the WY(LQ) and how we can use offsets and a simple FMA pattern with out kernels for direct calculation_
 
 **Part III**
-_show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking
+_show how one can utilize the thin q pattern within the WY and cover ideas basic ideas within Blis ie panel chunking_
