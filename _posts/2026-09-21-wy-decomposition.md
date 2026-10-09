@@ -299,7 +299,7 @@ $$ X_{feat} := \begin{bmatrix} feature_0 \big| feature_1 \big| \dots \big| featu
 
 * **Modern Row-Major Row Major Datasets (Observation Contiguous)**
 
-$$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bmatrix} $$
+$$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\ obs_m \end{bmatrix} $$
 
   Data is contiguous along observations. Features require strided access across rows
 
