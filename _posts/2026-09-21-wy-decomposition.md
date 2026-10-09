@@ -511,7 +511,7 @@ $$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_
 
 $\implies$
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
+$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
 
 by construction
 
@@ -539,7 +539,7 @@ $$ t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k $$
 $$ t_{k+1, r} = \tau_{k+1} $$
 
 
-therefore our derived matrix $T_k$ appears as
+therefore our derived matrix $T_{k+1}$ appears as
 
 $$T_{k+1} = \begin{bmatrix} T_k & 0 \\ - \tau_{k+1} w_{k+1}^\top Y_k T_k & \tau_{k+1} \end{bmatrix}$$
 
@@ -553,14 +553,15 @@ while maintaining our forms for $Y \sim \text{concatenation of Householder vecto
 we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
 and gesturing towards the definition of the householder that it's a rotation and a product of rotations is itself a rotation ie
 
+
 let $Q_k$ be a rotation
-$$ Q_\omega = Q_n * Q_1 \dots Q_0 $$
+$$ Q_\omega = Q_n * Q_{n-1} * \dots * Q_1 * Q_0 $$
 =>
 $$ Q_\omega^{-1} = Q_\omega^\top$$
 
 so we're doing something as the following 
 
-$$ A Q_n^\top Q_{n-1}^\top ... Q_0^\top Q0^\top Q1^\top... Q_n^\top$$
+$$ A Q_n * Q_{n-1} * ... * Q_0 * Q_0^\top * Q_1^\top * ... * Q_n^\top$$
 
 $$ A Q_\omega^\top Q_\omega = A$$
 
