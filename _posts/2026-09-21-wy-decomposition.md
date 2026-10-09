@@ -535,7 +535,7 @@ $$ t_{k+1, r} = \tau_{k+1} $$
 
 therefore our derived matrix $T_k$ appears as
 
-$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ - \tau_{k+1} w_{k+1} Y_k T_k & \tau_{k+1} \end{bmatrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ - \tau_{k+1} w_{k+1}^\top Y_k T_k & \tau_{k+1} \end{bmatrix}$$
 
 by showing the following
 $Q_0 \implies Q_1$
@@ -545,9 +545,9 @@ $Q_k \implies Q_{k+1}$
 while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$
 
 we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
-and gesturing towards the definition of the householder that it's a rotation and a product of rotations is itself a rotation ie
+and gesturing towards the definition of the householder that it's a reflection and a product of reflections is itself a reflection ie
 
-let $Q_k$ be a rotation
+let $Q_k$ be a reflection
 $$ Q_\omega = Q_n * Q_1 \dots Q_0 $$
 =>
 $$ Q_\omega^{-1} = Q_\omega^\top$$
