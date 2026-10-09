@@ -538,17 +538,17 @@ $LQ = L(I - Y L Y^\top)$</p>
 
     <p>After a bit of algebra, you’ll find:</p>
 
-    <p>\(T_k = \begin{bmatrix} T_{k-1} &amp; 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} &amp; \tau_k \end{bmatrix}\)</p>
+\[T_k = \begin{bmatrix} T_{k-1} &amp; 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} &amp; \tau_k \end{bmatrix}\]
+
   </details>
 </details>
 
 <details>
   <summary><strong>Rigourous Derivation </strong></summary>
 
-  <p>Shown from the Semirigourous-Derivation above:
- $Q_0 = (I - Y_0 T_0 Y_0^\top)$
- =&gt;
- $Q_1 = (I - Y_1 T_1 Y_1^\top)$</p>
+  <p>Shown from the Semirigourous-Derivation above:</p>
+
+  <p>$Q_0 = (I - Y_0 T_0 Y_0^\top) \implies Q_1 = (I - Y_1 T_1 Y_1^\top)$</p>
 
   <p>In order to complete our mathematatical induction for finite algorithmic termination we need to show that</p>
   <blockquote>
