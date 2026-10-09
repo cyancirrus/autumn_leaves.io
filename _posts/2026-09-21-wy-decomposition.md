@@ -266,7 +266,7 @@ This boundary traditionally has been the long standing interface between modern 
 Historically,*Fortran*'s mathematical concepts were all written in column major form.
 However, nowadays, most apis and data comes in row-major form as that has been the main way that *Computer Science* (CS) has structured data.
 
-Because of the embarassingly parallel nature of working with data within `observation` form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as `row major`.
+Because of the embarrassingly parallel nature of working with data within `observation` form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as `row major`.
 
 For square matrices one can choose the representation directly and can eliminate a couple of needed transposes for the solving based solution versus if one were to use the QR form.
 
@@ -349,7 +349,7 @@ This prevents us from needing logical stride patterns and unoptimized memory com
 
 ### WY Mathematical Derivation and the Forced Lower Triangle T
 
-I have not personally found a derivation for $T$ for the $WY(LQ)$ reprsentation, in any literature, so I thought I would provide it.
+I have not personally found a derivation for $T$ for the $WY(LQ)$ representation, in any literature, so I thought I would provide it.
 
 _Here I am going to presume some level of fluency in linear algebra while not being mathematically complete,
 still is a meaningful gesture at the full derivation and will help provide mathematical intuition for the form of the full derivation_
@@ -384,7 +384,7 @@ $$LQ = L(I - Y T Y^\top)$$; where $T$ is a forced Lower Triangle Matrix
 > If one does not wish to imagine the full derivation this while being extremely unrigorous gives intuition
 
 <details markdown="1">
-<summary><strong>Semi-Rigourous Derivation </strong></summary>
+<summary><strong>Semi-Rigorous Derivation </strong></summary>
 
 <details markdown="1">
 <summary><strong>1. Problem Setup and Decreasing order</strong></summary>
@@ -588,10 +588,10 @@ Hopefully you can see both the intuition for how WY is derived and why I deviate
 - allows us to reuse decades of optimizations simply by pivoting our representation 
 
 All of these significantly help the memory prefether and help improve data locality.
-Transposing at the boundries still hurt cost and if we can eliminate 33% of processing for small matrices we should.
+Transposing at the boundaries still hurt cost and if we can eliminate 33% of processing for small matrices we should.
 
 It is important to note wrt to the metrics my matmul kernel approaches ~ 4/3rds the cost of Faer so it's not surprising to see the gains start to diminish.
-However, I believe this is because of the kernel optimizations I am missing from my library and the immense amount of optimization that has gone into optmizing the codebase Faer.
+However, I believe this is because of the kernel optimizations I am missing from my library and the immense amount of optimization that has gone into optimizing the codebase Faer.
 
 I've merely obtained these gains by conjugating the QR decomposition with it's wanted row-major representation LQ.
 After doing so all of these years of optimizations are now available in the more modern row-major form.
