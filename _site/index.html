@@ -458,7 +458,8 @@ $LQ = L(I - Y L Y^\top)$</p>
 
     <p>We want to find a compact representation of the form:</p>
 
-    <p>\(\prod_{i=1}^{n} (I - \tau_{n-i} v_{n-i} v_{n-i}^\top) = I - Y T Y^\top\)</p>
+\[\prod_{i=1}^{n} (I - \tau_{n-i} v_{n-i} v_{n-i}^\top) = I - Y T Y^\top\]
+
   </details>
 
   <details>
@@ -476,7 +477,8 @@ $LQ = L(I - Y L Y^\top)$</p>
 
     <p>and</p>
 
-    <p>\(Y_1 = \begin{bmatrix} v_0 &amp; v_1 \end{bmatrix}\)</p>
+\[Y_1 = \begin{bmatrix} v_0 &amp; v_1 \end{bmatrix}\]
+
   </details>
 
   <details>
@@ -486,7 +488,8 @@ $LQ = L(I - Y L Y^\top)$</p>
 
 \[Q_0 = I - Y_0 T_0 Y_0^\top = I - v_0 \tau_0 v_0^\top\]
 
-    <p>\(\implies T_0 = \begin{bmatrix} \tau_0 \end{bmatrix}\)</p>
+\[\implies T_0 = \begin{bmatrix} \tau_0 \end{bmatrix}\]
+
   </details>
 
   <details>
@@ -523,7 +526,8 @@ $LQ = L(I - Y L Y^\top)$</p>
 
     <p>Finally, we end with our fully qualified triangular matrix:</p>
 
-    <p>\(T_1 = \begin{bmatrix} \tau_0 &amp; 0 \\ -\tau_0 \tau_1 v_1^\top v_0 &amp; \tau_1 \end{bmatrix}\)</p>
+\[T_1 = \begin{bmatrix} \tau_0 &amp; 0 \\ -\tau_0 \tau_1 v_1^\top v_0 &amp; \tau_1 \end{bmatrix}\]
+
   </details>
 
   <details>
@@ -555,7 +559,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p>$w_k \triangleq householder_k$</p>
 
-  <p>$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k^\top)$</p>
+  <p>$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$</p>
 
 \[Y_{k+1} = \begin{bmatrix} Y_k &amp; w_k\end{bmatrix}\]
 

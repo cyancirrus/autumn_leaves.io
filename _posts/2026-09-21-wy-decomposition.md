@@ -400,6 +400,7 @@ $$Q := (I - \tau_{n-1} v_{n-1} v_{n-1}^\top) \cdots (I - \tau_0 v_0 v_0^\top)$$
 We want to find a compact representation of the form:
 
 $$\prod_{i=1}^{n} (I - \tau_{n-i} v_{n-i} v_{n-i}^\top) = I - Y T Y^\top$$
+
 </details>
 
 <details markdown="1">
@@ -418,6 +419,7 @@ $$Y_0 = \begin{bmatrix} v_0 \end{bmatrix}$$
 and
 
 $$Y_1 = \begin{bmatrix} v_0 & v_1 \end{bmatrix}$$
+
 </details>
 
 <details markdown="1">
@@ -428,6 +430,7 @@ For $Q_0 = I - \tau_0 v_0 v_0^\top$, it should be equivalent to:
 $$Q_0 = I - Y_0 T_0 Y_0^\top = I - v_0 \tau_0 v_0^\top$$
 
 $$\implies T_0 = \begin{bmatrix} \tau_0 \end{bmatrix}$$
+
 </details>
 
 <details markdown="1">
@@ -463,6 +466,7 @@ $$\gamma_0 = -\tau_0 \tau_1 v_1^\top v_0$$
 Finally, we end with our fully qualified triangular matrix:
 
 $$T_1 = \begin{bmatrix} \tau_0 & 0 \\ -\tau_0 \tau_1 v_1^\top v_0 & \tau_1 \end{bmatrix}$$
+
 </details>
 
 <details markdown="1">
@@ -474,6 +478,7 @@ $$Q_{k+1} = (I - \tau_{k+1} v_{k+1} v_{k+1}^\top)(I - Y_k T_k Y_k^\top)$$
 After a bit of algebra, you'll find:
 
 $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k \end{bmatrix}$$
+
 </details>
 </details>
 
