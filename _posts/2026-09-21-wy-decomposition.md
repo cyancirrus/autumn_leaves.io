@@ -1,16 +1,14 @@
 ---
 layout: post
 title: "WY Decomposition"
-date: 2026-9-21
-tags: [rust, planning, perception, action, learning]
+date: 2026-10-09
+tags: [rust, linear-algebra, performance, systems-programming, cpu-cache]
 ---
 
 **Implementations**
 - [Main Repository](https://github.com/cyancirrus/stellar_math)
 - [Wy Decomposition](https://github.com/cyancirrus/stellar-math/tree/main/src/decomposition/wy)
 - [Benchmark Script](https://github.com/cyancirrus/stellar-math/blob/main/scripts/lq_decomposition.sh)
-
-# WORK IN PROGRESS ARTICLE
 
 ## QR Decomposition
 
@@ -52,7 +50,7 @@ $$
 
 In reality is almost better for the sake of this paper to presume that QR is exact or near-exact ie $$A = QR$$. 
 
-Given the `QR` Decomposition we can now effectively solve systems of equations as well as drmatically reduce the amount of work as well as the error.
+Given the `QR` Decomposition we can now effectively solve systems of equations as well as dramatically reduce the amount of work as well as the error.
 The computer does not have infinite precision so it really matters how we go about manipulating numbers.
 
 QR as a decomposition is an incredibly performant way to solve a system of equations quickly, drastically simplify problems, or change a system's computation properties.
@@ -122,7 +120,7 @@ _Click any of the following to expand_
 <details markdown="1">
 <summary><strong>Matrix Abbreviations</strong></summary>
 > **Q** := An orthonormal matrix  
-> **L** := An left (lower) triangular matrix  
+> **L** := A left (lower) triangular matrix  
 > **R** := A right (upper) triangular matrix  
 > **QR** := A matrix decomposition which splits a matrix of numbers into component parts consisting of an orthonormal `Q` and a right (upper) triangular matrix `R`  
 > **LQ** := The transposition of (QR)' ie `Right (Upper) Triangular` matrix becomes `Left (Lower) Triangular`  
@@ -132,7 +130,7 @@ _Click any of the following to expand_
 <details markdown="1">
 <summary><strong>Computation Technology</strong></summary>
 > **Blas** := Basic Linear Algebra Subprogram (B.L.A.S.) foundational project for all of numerical and computational science started in 1970s still innovations today  
-> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current archetecture  
+> **Fortran** := A programming language in which much of Blas written in 1970s, prior to then being ported to the programming language `C` the standards of which still define current architecture  
 > **Vector** := A vector is memory on the `heap` ie not `cache` where we allocate and pass around the `pointer` ie the `reference`  
 > **Vector of Vectors** := A representation of matrix which appears like `vec![vec![row1], ..., vec![rowm]]` expensive because of indirection  
 > **Row Major Form** := A linearized representation of matrix which appearing as `vec![a00, a01, ..., a0n, ..., am0, ... amn]` example below  
@@ -170,7 +168,7 @@ $$
 </div>
 </details>
 
-QR Decomposition also allows us to project data for other algorithms and other learners dramatically reducing training time for certain algos
+QR Decomposition also allows us to project data for other algorithms and other learners dramatically reducing training time for certain algorithms
 
 2) Dimension Reduction by working with the covariances
 
@@ -268,20 +266,20 @@ This boundary traditionally has been the long standing interface between modern 
 Historically,*Fortran*'s mathematical concepts were all written in column major form.
 However, nowadays, most apis and data comes in row-major form as that has been the main way that *Computer Science* (CS) has structured data.
 
-Because of the embaressingly parallel nature of working with data within `observation` form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as `row major`.
+Because of the embarassingly parallel nature of working with data within `observation` form ie each observation is very small and in many contexts can be parallelized - computation has moved towards this general direction. Which appears as `row major`.
 
-For square matricies one can chose the representation directly and can eliminate a couple of needed transposes for the solving based solution versus if one were to use the QR form.
+For square matrices one can choose the representation directly and can eliminate a couple of needed transposes for the solving based solution versus if one were to use the QR form.
 
-While at first glance this seems a bit unfare to merely test squares, one of $LQ$ / $QR$ features is to provide exact solutions for strictly square systems.
+While at first glance this seems a bit unfair to merely test squares, one of $LQ$ / $QR$ features is to provide exact solutions for strictly square systems.
 Essentially, there's been a natural barrier at which point every computation and decomposition would need to go through a layer of transposition prior to being calculated.
 
 ### Modern Row Major Data Representation - Observation-Contiguous
 
-Analyzing this misalignment simply in terms of our storage format changing between `row major` vs `column major` buries the real archetectural issue:
+Analyzing this misalignment simply in terms of our storage format changing between `row major` vs `column major` buries the real architectural issue:
 
-_What does the coniguous dimension represent?_
+_What does the contiguous dimension represent?_
 
-Historically, the blas reprsentation consumed data where each`feature` itself being contiguous and itself represented a column within the mathematics.
+Historically, the blas representation consumed data where each`feature` itself being contiguous and itself represented a column within the mathematics.
 Eventually our applications moved towards `observations` becoming the primary axis as this presented many opportunities for parallelization.
 
 * **Historical Column-Major Blas (Feature Contiguous)**
@@ -290,7 +288,7 @@ $$ X_{feat} := \begin{bmatrix} feature_0 \big| feature_1 \big| \dots \big| featu
 
   Data is contiguous along features. Observations require strided access across columns
 
-* **Modern Row-Major Row Major Dataets (Observation Contiguous)**
+* **Modern Row-Major Row Major Datasets (Observation Contiguous)**
 
 $$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bmatrix} $$
 
@@ -300,13 +298,13 @@ $$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bma
 If we examine however one of the most common use-cases for `LQ`/`QR` ie solving an exact system $A x = y$ for $x$ then we have additional knowledge.
 _Our matrix is square_
 
-Given that the data matrix iteself is a `Square Matrix`, this presents with a unique opportunity - we can chose if the contiguous axis itself represents a `feature` or if it reprsents an `observation`.
-We are presented here with a unique opportunity, if we chose that we are already in `feature` land for the square matrix (even if we are truly in `observation`) we will find equivalent solutions.
+Given that the data matrix itself is a `Square Matrix`, this presents with a unique opportunity - we can choose if the contiguous axis itself represents a `feature` or if it reprsents an `observation`.
+We are presented here with a unique opportunity, if we choose that we are already in `feature` land for the square matrix (even if we are truly in `observation`) we will find equivalent solutions.
 
 The solution I explored was simply to do just this as the choice is ours.
 If one was to look at the algebra, essentially if one were to find what would it look like if we used the optimized `WY(QR)` but within this land one would find that one is looking directly at `WY(LQ)`.
 
-_I will explore this further in a follow-up post detailing exactly why someone gets `LQ` and demonstraight a lightweight algebra that one can use to model when switching representational forms._
+_I will explore this further in a follow-up post detailing exactly why someone gets `LQ` and demonstrate a lightweight algebra that one can use to model when switching representational forms._
 
 ### WY Derivation - the importance of the Row Major Form
 
@@ -320,7 +318,7 @@ However, we eventually moved towards an implicit version where that we were in t
 
 When considering zero-transpose representations, one of the main benefits from the WY form is that we only need to need access to the current rows data for the householder vector.
 
-When we consider the row major represntation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $\mathbf{Order} \big[ M \big]$. The data simply would become $\begin{bmatrix} r_{k0} & r_{k1} & r_{k2} & r_{k3} \end{bmatrix}$.
+When we consider the row major representation of LQ, when we are trying to zero the row, $row_k$, we can simply consider the that are perfectly inline, ie each of these are simple floats and the scan is $\mathbf{Order} \big[ M \big]$. The data simply would become $\begin{bmatrix} r_{k0} & r_{k1} & r_{k2} & r_{k3} \end{bmatrix}$.
 
 This allows us to process data without skips or strides.
 However let's look at the traditional access pattern of QR when trying to zero the $Column_1$, within the row major form where we would need all the following data because the form is not *feature contiguous*.
@@ -331,7 +329,7 @@ However let's look at the traditional access pattern of QR when trying to zero t
     Row 2: [ a20 ][ *a21* ][ a22 ][ a23 ]
 ```
 
-The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience disasterous results
+The data above would appear within the CPU as the following, which while fine for a 3x4, consider a much larger matrix - we would experience disastrous results
 
 $$\begin{bmatrix} a00 & \mathbf{a01} & a02 & a03 & a10 & \mathbf{a11} & a12 & a13 & a20 & \mathbf{a21} & a22 & a23\end{bmatrix}$$
 
@@ -590,7 +588,7 @@ Hopefully you can see both the intuition for how WY is derived and why I deviate
 - allows us to reuse decades of optimizations simply by pivoting our representation 
 
 All of these significantly help the memory prefether and help improve data locality.
-Transposing at the boundries still hurt cost and if we can eliminate 33% of processing for small matricies we should.
+Transposing at the boundries still hurt cost and if we can eliminate 33% of processing for small matrices we should.
 
 It is important to note wrt to the metrics my matmul kernel approaches ~ 4/3rds the cost of Faer so it's not surprising to see the gains start to diminish.
 However, I believe this is because of the kernel optimizations I am missing from my library and the immense amount of optimization that has gone into optmizing the codebase Faer.
