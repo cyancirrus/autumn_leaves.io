@@ -497,7 +497,7 @@ By construction the following:
 
 $w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$
 
-$$Y_{k+1} = \begin{bmatrix} Y_k & w_k\end{bmatrix}$$
+$$Y_{k+1} = \begin{bmatrix} Y_k & w_{k+1}\end{bmatrix}$$
 
 $$Y_{k+1}^\top = \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top\end{bmatrix}$$
 
@@ -515,7 +515,13 @@ $$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{
 
 by construction
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k & w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$
+$$
+Y_{k+1} T_{k+1} Y_{k+1}^\top =
+\begin{bmatrix} Y_k & w_{k+1} \end{bmatrix}
+\begin{bmatrix} T_k & 0 \\ t_{k+1,l} & t_{k+1,r} \end{bmatrix}
+\begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}
+$$
+
 
 multiplying this all out we get
 

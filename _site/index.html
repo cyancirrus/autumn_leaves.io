@@ -561,7 +561,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p>$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$</p>
 
-\[Y_{k+1} = \begin{bmatrix} Y_k &amp; w_k\end{bmatrix}\]
+\[Y_{k+1} = \begin{bmatrix} Y_k &amp; w_{k+1}\end{bmatrix}\]
 
 \[Y_{k+1}^\top = \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top\end{bmatrix}\]
 
@@ -579,7 +579,11 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p>by construction</p>
 
-\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k &amp; w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k &amp; 0 \\ t_{k+1, l} &amp; t_{k+1, r} \end{bmatrix}\]
+  <!-- $$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k & w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$ -->
+  <p>\(Y_{k+1} T_{k+1} Y_{k+1}^\top =
+\begin{bmatrix} Y_k &amp; w_{k+1} \end{bmatrix}
+\begin{bmatrix} T_k &amp; 0 \\ t_{k+1,l} &amp; t_{k+1,r} \end{bmatrix}
+\begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}\)</p>
 
   <p>multiplying this all out we get</p>
 
@@ -608,9 +612,9 @@ $Q_0 \implies Q_1$</p>
   <p>while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$</p>
 
   <p>we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
-and gesturing towards the definition of the householder that it’s a reflection and a product of reflections is itself a reflection ie</p>
+and gesturing towards the definition of the householder that it’s a rotation and a product of rotations is itself a rotation ie</p>
 
-  <p>let $Q_k$ be a reflection
+  <p>let $Q_k$ be a rotation
 \(Q_\omega = Q_n * Q_1 \dots Q_0\)
 =&gt;
 \(Q_\omega^{-1} = Q_\omega^\top\)</p>
