@@ -480,38 +480,38 @@ $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k
 </details>
 </details>
 
-
 <details markdown="1">
-<summary><strong>Rigorous Derivation </strong></summary>
+<summary><strong>Rigorous Derivation</strong></summary>
 
- Shown from the Semirigourous-Derivation above:
+Shown from the Semi-Rigorous Derivation above:
 
- $Q_0 = (I - Y_0 T_0 Y_0^\top) \implies Q_1 = (I - Y_1 T_1 Y_1^\top)$
+$Q_0 = (I - Y_0 T_0 Y_0^\top) \implies Q_1 = (I - Y_1 T_1 Y_1^\top)$
 
-In order to complete our mathematatical induction for finite algorithmic termination we need to show that
+In order to complete our mathematical induction for finite algorithmic termination we need to show that
+
 > given $Y_k T_k Y_k^\top \implies Y_{k+1} T_{k+1} Y_{k+1}^\top$
 
 By construction the following:
 
-> $w_k \triangleq householder_k$
+> $w_k \triangleq \text{householder}_k$
 
 $w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$
 
-$$Y_{k+1} = \begin{bmatrix} Y_k & w_{k+1}\end{bmatrix}$$
+$$Y_{k+1} = \begin{bmatrix} Y_k & w_{k+1} \end{bmatrix}$$
 
-$$Y_{k+1}^\top = \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top\end{bmatrix}$$
+$$Y_{k+1}^\top = \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}$$
 
-$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r}\end{bmatrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ t_{k+1,l} & t_{k+1,r} \end{bmatrix}$$
 
 _l for left, r for right_
 
-$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - Y_k T_k Y_k^\top)$$
+$$Q_{k+1} = (I - \tau_{k+1} w_{k+1} w_{k+1}^\top)(I - Y_k T_k Y_k^\top)$$
 
 $$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]$$
 
 $\implies$
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
+$$Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top$$
 
 by construction
 
@@ -522,57 +522,62 @@ Y_{k+1} T_{k+1} Y_{k+1}^\top =
 \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}
 $$
 
-
 multiplying this all out we get
 
-$$Y_{k+1} T_{k+1} Y_{k+1}^\top = Y_k T_k Y_k^\top + w_{k+1} t_{k+1, l} Y_k^\top + w_{k+1} t_{k+1, r} w_{k+1}^\top$$
+$$Y_{k+1} T_{k+1} Y_{k+1}^\top = Y_k T_k Y_k^\top + w_{k+1} t_{k+1,l} Y_k^\top + w_{k+1} t_{k+1,r} w_{k+1}^\top$$
 
 recall our previous form
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
+$$Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top$$
 
 similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which
 
-$\implies$ 
+$\implies$
 
-$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k $$
-$$ t_{k+1, r} = \tau_{k+1} $$
-
+$$
+\begin{aligned}
+t_{k+1,l} &= -\tau_{k+1} w_{k+1}^\top Y_k T_k \\
+t_{k+1,r} &= \tau_{k+1}
+\end{aligned}
+$$
 
 therefore our derived matrix $T_{k+1}$ appears as
 
-$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ - \tau_{k+1} w_{k+1}^\top Y_k T_k & \tau_{k+1} \end{bmatrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ -\tau_{k+1} w_{k+1}^\top Y_k T_k & \tau_{k+1} \end{bmatrix}$$
 
 by showing the following
-$Q_0 \implies Q_1$
 
-$Q_k \implies Q_{k+1}$
+- $Q_0 \implies Q_1$
+- $Q_k \implies Q_{k+1}$
 
 while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$
 
 we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
 and gesturing towards the definition of the householder that it's a rotation and a product of rotations is itself a rotation ie
 
-
 let $Q_k$ be a rotation
-$$ Q_\omega = Q_n * Q_{n-1} * \dots * Q_1 * Q_0 $$
-=>
-$$ Q_\omega^{-1} = Q_\omega^\top$$
 
-so we're doing something as the following 
+$$Q_\omega = Q_n * Q_{n-1} * \dots * Q_1 * Q_0$$
 
-$$ A Q_n * Q_{n-1} * ... * Q_0 * Q_0^\top * Q_1^\top * ... * Q_n^\top$$
+$\implies$
 
-$$ A Q_\omega^\top Q_\omega = A$$
+$$Q_\omega^{-1} = Q_\omega^\top$$
+
+so we're doing something as the following
+
+$$A * Q_n * Q_{n-1} * \dots * Q_0 * Q_0^\top * Q_1^\top * \dots * Q_n^\top$$
+
+$$A * Q_\omega^\top * Q_\omega = A$$
 
 via householder and the zeroings of that form
-$$ L \triangleq (A Q_\omega^\top) $$
 
-$$ Q_\omega = (I - Y T Y^\top) $$
+$$L \triangleq A * Q_\omega^\top$$
+
+$$Q_\omega = I - Y T Y^\top$$
 
 $$\therefore$$
 
-$$ A = L ( I - Y T Y^\top) $$
+$$A = L * (I - Y T Y^\top)$$
 
 Finally this completes our mathematical induction for our algorithm and that the form is valid for a decomposition and that the algorithm achieves finite termination.
 

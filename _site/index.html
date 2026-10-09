@@ -571,19 +571,18 @@ $LQ = L(I - Y L Y^\top)$</p>
 
 \[Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - Y_k T_k Y_k^\top)\]
 
-\[Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]\]
+\[Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]\]
 
   <p>$\implies$</p>
 
-\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
 
   <p>by construction</p>
 
-  <!-- $$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \begin{bmatrix} Y_k & w_k \end{bmatrix} \begin{bmatrix} Y_k^\top \\ w_k^\top \end{bmatrix} \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r} \end{bmatrix}$$ -->
-  <p>\(Y_{k+1} T_{k+1} Y_{k+1}^\top =
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top =
 \begin{bmatrix} Y_k &amp; w_{k+1} \end{bmatrix}
 \begin{bmatrix} T_k &amp; 0 \\ t_{k+1,l} &amp; t_{k+1,r} \end{bmatrix}
-\begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}\)</p>
+\begin{bmatrix} Y_k^\top \\ w_{k+1}^\top \end{bmatrix}\]
 
   <p>multiplying this all out we get</p>
 
@@ -591,7 +590,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p>recall our previous form</p>
 
-\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
+\[Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top\]
 
   <p>similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which</p>
 
@@ -600,7 +599,7 @@ $LQ = L(I - Y L Y^\top)$</p>
   <p>\(t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k\)
 \(t_{k+1, r} = \tau_{k+1}\)</p>
 
-  <p>therefore our derived matrix $T_k$ appears as</p>
+  <p>therefore our derived matrix $T_{k+1}$ appears as</p>
 
 \[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\ - \tau_{k+1} w_{k+1}^\top Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
 
@@ -615,13 +614,13 @@ $Q_0 \implies Q_1$</p>
 and gesturing towards the definition of the householder that it’s a rotation and a product of rotations is itself a rotation ie</p>
 
   <p>let $Q_k$ be a rotation
-\(Q_\omega = Q_n * Q_1 \dots Q_0\)
+\(Q_\omega = Q_n * Q_{n-1} * \dots * Q_1 * Q_0\)
 =&gt;
 \(Q_\omega^{-1} = Q_\omega^\top\)</p>
 
   <p>so we’re doing something as the following</p>
 
-\[A Q_n^\top Q_{n-1}^\top ... Q_0^\top Q0^\top Q1^\top... Q_n^\top\]
+\[A Q_n * Q_{n-1} * ... * Q_0 * Q_0^\top * Q_1^\top * ... * Q_n^\top\]
 
 \[A Q_\omega^\top Q_\omega = A\]
 
