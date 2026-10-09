@@ -495,7 +495,7 @@ In order to complete our mathematatical induction for finite algorithmic termina
 
 By construction the following:
 
-$w_k \triangleq householder_k$
+> $w_k \triangleq householder_k$
 
 $w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$
 
