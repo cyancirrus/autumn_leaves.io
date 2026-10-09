@@ -545,9 +545,9 @@ $Q_k \implies Q_{k+1}$
 while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$
 
 we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
-and gesturing towards the definition of the householder that it's a reflection and a product of reflections is itself a reflection ie
+and gesturing towards the definition of the householder that it's a rotation and a product of rotations is itself a rotation ie
 
-let $Q_k$ be a reflection
+let $Q_k$ be a rotation
 $$ Q_\omega = Q_n * Q_1 \dots Q_0 $$
 =>
 $$ Q_\omega^{-1} = Q_\omega^\top$$

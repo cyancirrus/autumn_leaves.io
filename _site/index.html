@@ -356,7 +356,7 @@ Eventually our applications moved towards <code class="language-plaintext highli
 <p>If we examine however one of the most common use-cases for <code class="language-plaintext highlighter-rouge">LQ</code>/<code class="language-plaintext highlighter-rouge">QR</code> ie solving an exact system $A x = y$ for $x$ then we have additional knowledge.
 <em>Our matrix is square</em></p>
 
-<p>Given that the data matrix itself is a <code class="language-plaintext highlighter-rouge">Square Matrix</code>, this presents with a unique opportunity - we can choose if the contiguous axis itself represents a <code class="language-plaintext highlighter-rouge">feature</code> or if it reprsents an <code class="language-plaintext highlighter-rouge">observation</code>.
+<p>Given that the data matrix itself is a <code class="language-plaintext highlighter-rouge">Square Matrix</code>, this presents with a unique opportunity - we can choose if the contiguous axis itself represents a <code class="language-plaintext highlighter-rouge">feature</code> or if it represents an <code class="language-plaintext highlighter-rouge">observation</code>.
 We are presented here with a unique opportunity, if we choose that we are already in <code class="language-plaintext highlighter-rouge">feature</code> land for the square matrix (even if we are truly in <code class="language-plaintext highlighter-rouge">observation</code>) we will find equivalent solutions.</p>
 
 <p>The solution I explored was simply to do just this as the choice is ours.
@@ -542,7 +542,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 </details>
 
 <details>
-  <summary><strong>Rigourous Derivation </strong></summary>
+  <summary><strong>Rigorous Derivation </strong></summary>
 
   <p>Shown from the Semirigourous-Derivation above:</p>
 
@@ -598,7 +598,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p>therefore our derived matrix $T_k$ appears as</p>
 
-\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\ - \tau_{k+1} w_{k+1} Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
+\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\ - \tau_{k+1} w_{k+1}^\top Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
 
   <p>by showing the following
 $Q_0 \implies Q_1$</p>
@@ -608,9 +608,9 @@ $Q_0 \implies Q_1$</p>
   <p>while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$</p>
 
   <p>we have shown that $WY(LQ)$ has finite termination in the amount of rows steps
-and gesturing towards the definition of the householder that it’s a rotation and a product of rotations is itself a rotation ie</p>
+and gesturing towards the definition of the householder that it’s a reflection and a product of reflections is itself a reflection ie</p>
 
-  <p>let $Q_k$ be a rotation
+  <p>let $Q_k$ be a reflection
 \(Q_\omega = Q_n * Q_1 \dots Q_0\)
 =&gt;
 \(Q_\omega^{-1} = Q_\omega^\top\)</p>
