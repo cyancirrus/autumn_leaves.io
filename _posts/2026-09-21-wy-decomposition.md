@@ -298,7 +298,7 @@ $$ X_{obs} := \begin{bmatrix} obs_0^\top \\ obs_1^\top \\ \dots \\obs_m \end{bma
 If we examine however one of the most common use-cases for `LQ`/`QR` ie solving an exact system $A x = y$ for $x$ then we have additional knowledge.
 _Our matrix is square_
 
-Given that the data matrix itself is a `Square Matrix`, this presents with a unique opportunity - we can choose if the contiguous axis itself represents a `feature` or if it reprsents an `observation`.
+Given that the data matrix itself is a `Square Matrix`, this presents with a unique opportunity - we can choose if the contiguous axis itself represents a `feature` or if it represents an `observation`.
 We are presented here with a unique opportunity, if we choose that we are already in `feature` land for the square matrix (even if we are truly in `observation`) we will find equivalent solutions.
 
 The solution I explored was simply to do just this as the choice is ours.
@@ -482,7 +482,7 @@ $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k
 
 
 <details markdown="1">
-<summary><strong>Rigourous Derivation </strong></summary>
+<summary><strong>Rigorous Derivation </strong></summary>
 
  Shown from the Semirigourous-Derivation above:
 
