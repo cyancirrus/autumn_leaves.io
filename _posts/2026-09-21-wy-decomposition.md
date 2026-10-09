@@ -58,7 +58,7 @@ QR is a non-iterative algorithm so it runs in deterministic time as compared to 
 
 ## WY Decomposition - Main Focus and Post Overview
 
-In the coming sections, We will first hit the glossary as a reference point for definitions, then we'll begin the tour of row major, simd and kernels, wy and then finally computational optimizations
+In the coming sections, we will first hit the glossary as a reference point for definitions, then we'll begin the tour of row major, simd and kernels, wy and then finally computational optimizations
 **Goals**
 - Provide intuition for why the LQ decomposition is used in row major
 - Explore the derivation for WY and show a more optimal representation of T for row major form
