@@ -72,6 +72,15 @@ Promise this will be worth it here are my results against Rust's most respected 
 | **32** | 9.067 µs | 14.026 µs | 27.031 µs | 25.767 µs |
 | **64** | 43.419 µs | 47.305 µs | 155.770 µs | 101.690 µs |
 
+### Benchmark Environment
+
+All benchmarks were collected on an x86_64 Haswell test bench running native macOS:
+
+- **CPU:** Intel Core i7-4770HQ @ 2.20GHz (8 threads, AVX2 + FMA3 support)
+- **L1 Data Cache:** 32 KB per core (64 B cache line size)
+- **RAM:** 16 GB DDR3
+- **Toolchain:** Rust `x86_64-apple-darwin` (Release build, `target-cpu=native`)
+
 ## Base Primitives Needed for WY
 
 Before diving into algorithms, lets get some definitions out of the way that way there can be a common reference point for the coming sections.
