@@ -503,7 +503,7 @@ $$T_{k+1} = \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r}\end{bmatrix}$$
 
 _l for left, r for right_
 
-$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - T_k Y_k T_k^\top)$$
+$$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - Y_k T_k Y_k^\top)$$
 
 $$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]$$
 
@@ -537,6 +537,7 @@ $$T_{k+1} = \begin{bmatrix} T_k & 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k & \tau_{k+1
 
 by showing the following
 $Q_0 \implies Q_1$
+
 $Q_k \implies Q_{k+1}$
 
 while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$
