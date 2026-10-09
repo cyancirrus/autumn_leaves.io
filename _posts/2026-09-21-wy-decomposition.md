@@ -493,7 +493,7 @@ By construction the following:
 
 $w_k \triangleq householder_k$
 
-$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_kk$ after the $a_kk (I - \tau_k w_k w_k^\top)$
+$w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_{kk}$ after the $a_{kk} (I - \tau_k w_k w_k^\top)$
 
 $$Y_{k+1} = \begin{bmatrix} Y_k & w_k\end{bmatrix}$$
 

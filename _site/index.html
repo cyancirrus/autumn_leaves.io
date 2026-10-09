@@ -541,7 +541,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 <details>
   <summary><strong>Rigourous Derivation </strong></summary>
 
-  <p>Shown from the Semirigour-Derivation above:
+  <p>Shown from the Semirigourous-Derivation above:
  $Q_0 = (I - Y_0 T_0 Y_0^\top)$
  =&gt;
  $Q_1 = (I - Y_1 T_1 Y_1^\top)$</p>
@@ -565,7 +565,7 @@ $LQ = L(I - Y L Y^\top)$</p>
 
   <p><em>l for left, r for right</em></p>
 
-\[Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - T_k Y_k T_k^\top)\]
+\[Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - Y_k T_k Y_k^\top)\]
 
 \[Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]\]
 
@@ -590,15 +590,16 @@ $LQ = L(I - Y L Y^\top)$</p>
   <p>$\implies$</p>
 
   <p>\(t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k\)
-\(t_{k+1, r) = \tau_{k+1}\)</p>
+\(t_{k+1, r} = \tau_{k+1}\)</p>
 
   <p>therefore our derived matrix $T_k$ appears as</p>
 
-\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
+\[T_{k+1} = \begin{bmatrix} T_k &amp; 0 \\ - \tau_{k+1} w_{k+1} Y_k T_k &amp; \tau_{k+1} \end{bmatrix}\]
 
   <p>by showing the following
-$Q_0 \implies Q_1$
-$Q_k \implies Q_{k+1}$</p>
+$Q_0 \implies Q_1$</p>
+
+  <p>$Q_k \implies Q_{k+1}$</p>
 
   <p>while maintaining our forms for $Y \sim \text{concatenation of Householder vectors}$ and $T \sim \text{lower triangular}$</p>
 
