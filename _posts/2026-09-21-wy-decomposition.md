@@ -481,7 +481,7 @@ $$T_k = \begin{bmatrix} T_{k-1} & 0 \\ -\tau_k v_k^\top Y_{k-1} T_{k-1} & \tau_k
 <details markdown="1">
 <summary><strong>Rigourous Derivation </strong></summary>
 
- Shown from the Semirigour-Derivation above:
+ Shown from the Semirigourous-Derivation above:
  $Q_0 = (I - Y_0 T_0 Y_0^\top)$
  =>
  $Q_1 = (I - Y_1 T_1 Y_1^\top)$
