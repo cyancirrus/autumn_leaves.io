@@ -507,7 +507,7 @@ _l for left, r for right_
 
 $$Q_{k+1} = ( I - \tau_{k+1} w_{k+1} w_{k+1}^\top )(I - Y_k T_k Y_k^\top)$$
 
-$$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]$$
+$$Q_{k+1} = I - \big[ \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top \big]$$
 
 $\implies$
 
@@ -529,7 +529,7 @@ $$Y_{k+1} T_{k+1} Y_{k+1}^\top = Y_k T_k Y_k^\top + w_{k+1} t_{k+1, l} Y_k^\top 
 
 recall our previous form
 
-$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
+$$ Y_{k+1} T_{k+1} Y_{k+1}^\top = \tau_{k+1} w_{k+1} w_{k+1}^\top + Y_k T_k Y_k^\top - \tau_{k+1} w_{k+1} w_{k+1}^\top Y_k T_k Y_k^\top $$
 
 similar to the previous proof, and glossing over the algebra and expansions ie just look at what the last term is, this constrains which one is which
 
