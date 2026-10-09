@@ -501,7 +501,7 @@ $w_k$ is the vector which zero^s the kth row to the right of the diagonal at $a_
 
 $$Y_{k+1} = \begin{bmatrix} Y_k & w_k\end{bmatrix}$$
 
-$$Y_{k+1} = \begin{bmatrix} Y_k^\top \\ w_k^\top\end{bmatrix}$$
+$$Y_{k+1}^\top = \begin{bmatrix} Y_k^\top \\ w_{k+1}^\top\end{bmatrix}$$
 
 $$T_{k+1} = \begin{bmatrix} T_k & 0 \\ t_{k+1, l} & t_{k+1, r}\end{bmatrix}$$
 
