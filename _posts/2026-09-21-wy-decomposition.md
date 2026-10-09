@@ -533,7 +533,7 @@ $$ t_{k+1, r} = \tau_{k+1} $$
 
 therefore our derived matrix $T_k$ appears as
 
-$$T_{k+1} = \begin{bmatrix} T_k & 0 \\  - \tau_{k+1} w_{k+1} Y_k T_k & \tau_{k+1} \end{bmatrix}$$
+$$T_{k+1} = \begin{bmatrix} T_k & 0 \\ - \tau_{k+1} w_{k+1} Y_k T_k & \tau_{k+1} \end{bmatrix}$$
 
 by showing the following
 $Q_0 \implies Q_1$
