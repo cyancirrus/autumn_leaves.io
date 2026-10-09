@@ -527,8 +527,8 @@ similar to the previous proof, and glossing over the algebra and expansions ie j
 
 $\implies$ 
 
-$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k$$
-$$ t_{k+1, r) = \tau_{k+1}$$
+$$ t_{k+1, l} = - \tau_{k+1} w_{k+1}^\top Y_k T_k $$
+$$ t_{k+1, r} = \tau_{k+1} $$
 
 
 therefore our derived matrix $T_k$ appears as
