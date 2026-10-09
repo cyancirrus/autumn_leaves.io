@@ -599,7 +599,7 @@ Hopefully you can see both the intuition for how WY is derived and why I deviate
 - helps to eliminate transposes at the boundary lines of the communication of applications and the historical Blas format
 - allows us to reuse decades of optimizations simply by pivoting our representation 
 
-All of these significantly help the memory prefether and help improve data locality.
+All of these significantly help the memory prefetcher and help improve data locality.
 Transposing at the boundaries still hurt cost and if we can eliminate 33% of processing for small matrices we should.
 
 It is important to note wrt to the metrics my matmul kernel approaches ~ 4/3rds the cost of Faer so it's not surprising to see the gains start to diminish.
